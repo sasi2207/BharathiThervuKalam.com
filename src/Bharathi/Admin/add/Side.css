@@ -1,0 +1,101 @@
+/* Sidenav */
+.sidenav {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #111;
+  overflow-x: hidden;
+  transition: 0.5s;
+  padding-top: 60px;
+}
+
+.sidenav a {
+  padding: 10px 15px;
+  text-decoration: none;
+  font-size: 20px;
+  color: #818181;
+  display: block;
+  transition: 0.3s;
+}
+
+.sidenav a:hover {
+  color: #f1f1f1;
+}
+
+.sidenav .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  color: #818181;
+  cursor: pointer;
+}
+
+/* Responsive styles */
+@media screen and (max-height: 450px) {
+  .sidenav { padding-top: 15px; }
+  .sidenav a { font-size: 18px; }
+}
+
+@media screen and (max-width: 768px) {
+  .sidenav {
+    width: 100%;
+    padding-top: 30px; /* Adjust padding if needed */
+  }
+  #main {
+    margin-left: 0;
+  }
+  .sidenav .closebtn {
+    right: 15px;
+  }
+}
+
+#main {
+  transition: margin-left 0.5s;
+  /* padding: 16px; */
+}
+
+.togg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 20px;
+  font-size: 30px;
+  cursor: pointer;
+  color: #111;
+}
+
+.all-height {
+background-color: aquamarine;
+  height: 100vh;
+}
+
+
+/* Example butterfly animation (left and right) */
+@keyframes butterfly-left {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-20px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes butterfly-right {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(20px); }
+  100% { transform: translateX(0); }
+}
+
+.togg {
+  cursor: pointer;
+  font-size: 30px;
+  transition: transform 0.5s ease-in-out;
+}
+
+.pl-5{
+  margin-top: -50px;
+}
+
+
+

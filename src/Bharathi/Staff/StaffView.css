@@ -1,0 +1,26 @@
+/* Animation for table rows */
+.animated-table tbody tr {
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+  }
+  
+  .animated-table tbody tr:nth-child(odd) {
+    animation-delay: 0.2s;
+  }
+  
+  .animated-table tbody tr:nth-child(even) {
+    animation-delay: 0.4s;
+  }
+  
+  /* Keyframes for fade-in effect */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  

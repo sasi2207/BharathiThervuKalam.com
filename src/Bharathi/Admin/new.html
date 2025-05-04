@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Custom styles for dashboard */
+        .main-content {
+            padding: 20px;
+        }
+
+        .card {
+            border-radius: 0.5rem;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-list li {
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px;
+        }
+
+        .activity-list li:last-child {
+            border-bottom: none;
+        }
+
+        .activity-list li .activity-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .activity-list li .activity-item .time {
+            color: #6c757d;
+        }
+
+        .user-summary .user-card {
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-summary .user-card .card-header {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .user-summary .user-card .card-body {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-2 d-none d-md-block bg-dark sidebar">
+                <div class="sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                DASHBOARD
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Staff">
+                                STAFF ADD
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Student">
+                                STUDENT ADD
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Faculty-Add">
+                                FACULTY ADD
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Achivers-Add">
+                                ACHIEVERS ADD
+                            </a>
+                        </li>
+
+                        <!-- Add Groups Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="addGroupsDropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                ADD GROUPS
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="addGroupsDropdown">
+                                <a class="dropdown-item" href="/Group-I">ADD GROUP I</a>
+                                <a class="dropdown-item" href="/Group2-Add">ADD GROUP II</a>
+                                <a class="dropdown-item" href="/Group2A-Add">ADD GROUP II-A</a>
+                                <a class="dropdown-item" href="/Group4-Add">ADD GROUP IV</a>
+                            </div>
+                        </li>
+
+                        <!-- View Groups Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="viewGroupsDropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                VIEW GROUPS
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="viewGroupsDropdown">
+                                <a class="dropdown-item" href="/Group-I-View">GROUP I VIEW</a>
+                                <a class="dropdown-item" href="/Group2-View">GROUP II VIEW</a>
+                                <a class="dropdown-item" href="/Group2A-View">GROUP II-A VIEW</a>
+                                <a class="dropdown-item" href="/Group4-View">GROUP IV VIEW</a>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" href="/TNUSRB-Add">
+                                TNUSRB SYLLABUS ADD
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Test-Add">
+                                TEST SERIES ADD
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/View-Staff">
+                                VIEW STAFF
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Student-Details">
+                                VIEW STUDENT
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Faculty-View">
+                                VIEW FACULTY
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Tnusrb-View">
+                                TNUSRB SYLLABUS VIEW
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Achivers-View">
+                                VIEW ACHIEVERS
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Test-View">
+                                VIEW TEST SERIES
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+            
+        <!-- Main Content -->
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4 main-content">
+            <h1 class="h2">Dashboard</h1>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-white bg-primary mb-3">
+                        <div class="card-header">Total Users</div>
+                        <div class="card-body">
+                            <h5 class="card-title">150</h5>
+                            <p class="card-text">Total number of registered users.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-white bg-success mb-3">
+                        <div class="card-header">Active Sessions</div>
+                        <div class="card-body">
+                            <h5 class="card-title">25</h5>
+                            <p class="card-text">Currently active sessions on the platform.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-white bg-danger mb-3">
+                        <div class="card-header">Errors</div>
+                        <div class="card-body">
+                            <h5 class="card-title">5</h5>
+                            <p class="card-text">Number of errors reported in the last 24 hours.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Components -->
+            <div class="row">
+                <!-- User Activity List -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header">Recent Activities</div>
+                        <div class="card-body activity-list">
+                            <ul class="list-unstyled">
+                                <li>
+                                    <div class="activity-item">
+                                        <span>Added new user John Doe</span>
+                                        <span class="time">10 mins ago</span>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="activity-item">
+                                        <span>Updated user profile Jane Smith</span>
+                                        <span class="time">30 mins ago</span>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="activity-item">
+                                        <span>Deleted user account Mike Johnson</span>
+                                        <span class="time">1 hour ago</span>
+                                    </div>
+                                </li>
+                                <!-- More activities -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Overview with Chart -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header">System Overview</div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <!-- You can use Chart.js or another library to render charts here -->
+                                <canvas id="systemOverviewChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Summary -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="user-summary">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card user-card text-center">
+                                    <div class="card-header">Total Users</div>
+                                    <div class="card-body">
+                                        <h5 class="card-title">150</h5>
+                                        <p class="card-text">Total number of registered users.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card user-card text-center">
+                                    <div class="card-header">Active Users</div>
+                                    <div class="card-body">
+                                        <h5 class="card-title">45</h5>
+                                        <p class="card-text">Users currently active on the platform.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card user-card text-center">
+                                    <div class="card-header">New Sign-ups</div>
+                                    <div class="card-body">
+                                        <h5 class="card-title">20</h5>
+                                        <p class="card-text">New users signed up this month.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Example of a chart with Chart.js
+        var ctx = document.getElementById('systemOverviewChart').getContext('2d');
+        var systemOverviewChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Monthly Overview',
+                    data: [10, 20, 30, 40, 50, 60],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

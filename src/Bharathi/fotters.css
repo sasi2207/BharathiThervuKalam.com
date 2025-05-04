@@ -1,0 +1,75 @@
+body {
+  background-color: #f8f9fa;
+  font-family: Arial, sans-serif;
+}
+
+
+
+
+.contact-section1 h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #f6f5f5;
+}
+
+.contact-section1 ul {
+  list-style: none;
+  padding: 0;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.contact-section1 li {
+  font-size: 1.25rem;
+  margin: 10px 0;
+  color: #fff;
+}
+
+.contact-section1 i {
+  color: #fff;
+  margin-right: 10px;
+}
+
+.d-inline{
+  transition: transform 2s ease;
+}
+.d-inline:hover{
+  transform: scale(1.05);
+  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); */
+  color: orangered;
+}
+
+.bg-primary-custom {
+  background-color: #06092a;
+  padding: 50px;
+}
+
+.line11 {
+  width: 0;
+  height: 4px;
+  background-color: #18cdfa;
+  animation: growLine 2s forwards infinite;
+}
+
+@keyframes growLine {
+  from {
+      width: 0;
+  }
+  to {
+      width: 100%;
+  }
+}
+
+.row11 {
+  display: flex;
+  justify-content: space-between;
+  background-color: #06092a;
+  flex-wrap: wrap;
+}
+
+h6{
+  font-size: 40px;
+  color: white;
+}
+
+

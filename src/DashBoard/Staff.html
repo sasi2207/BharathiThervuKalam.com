@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Custom Styles */
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .sidebar nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .sidebar nav ul li {
+            margin: 10px 0;
+        }
+        
+        .sidebar nav ul li a {
+            color: #ecf0f1;
+            text-decoration: none;
+            display: block;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .sidebar nav ul li a:hover {
+            background-color: #34495e;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #ecf0f1;
+            margin-left: 250px;
+            transition: margin-left 0.3s;
+        }
+        
+        header {
+            border-bottom: 2px solid #bdc3c7;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            background-color: #3498db;
+            color: #fff;
+            border-radius: 4px;
+        }
+        
+        .sidebar-toggle {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: fixed;
+                top: 0;
+                left: -250px; /* Initially hidden */
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .sidebar-toggle {
+                display: block;
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background-color: #3498db;
+                color: #fff;
+                border: none;
+                padding: 10px;
+                cursor: pointer;
+                border-radius: 4px;
+                z-index: 1000;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 100%;
+                left: -100%; /* Hide sidebar initially on very small screens */
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .sidebar-toggle {
+                top: 15px;
+                left: 15px;
+                padding: 12px;
+            }
+            
+            header h1 {
+                font-size: 1.2em;
+            }
+            
+            .sidebar nav ul li a {
+                font-size: 0.9em;
+            }
+        }
+        
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle btn btn-primary">☰</button>
+    
+    <!-- Container for Sidebar and Main Content -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>Admin Dashboard</h2>
+            <nav>
+                <ul>
+                    <li><a href="/">Dashboard</a></li>
+                    <li><a href="/Staff">Staff Add</a></li>
+                    <li><a href="/Student">Student Add</a></li>
+                    <li><a href="/Faculty-Add">Faculty Add</a></li>
+                    <li><a href="/Achivers-Add">Achievers Add</a></li>
+                    <li><a href="/Group-I">Add Group I</a></li>
+                    <li><a href="/Group2-Add">Add Group II</a></li>
+                    <li><a href="/Group2A-Add">Add Group II-A</a></li>
+                    <li><a href="/Group4-Add">Add Group IV</a></li>
+                    <li><a href="/TNUSRB-Add">TNUSRB Syllabus Add</a></li>
+                    <li><a href="/Test-Add">Test Series Add</a></li>
+                    <li><a href="/Staff-View">View Staff</a></li>
+                    <li><a href="/Student-Details">View Student</a></li>
+                    <li><a href="/Faculty-View">View Faculty</a></li>
+                    <li><a href="/Group-I-View">Group I View</a></li>
+                    <li><a href="/Group2-View">Group II View</a></li>
+                    <li><a href="/Group2A-View">Group II-A View</a></li>
+                    <li><a href="/Group4-View">Group IV View</a></li>
+                    <li><a href="/Tnusrb-View">TNUSRB Syllabus View</a></li>
+                    <li><a href="/Achivers-View">View Achievers</a></li>
+                    <li><a href="/Test-View">View Test Series</a></li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1>Welcome to Admin Dashboard</h1>
+            </header>
+            <section>
+                <!-- Main content goes here -->
+                <p>Select an option from the sidebar to get started.</p>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <!-- Custom Script -->
+    <script>
+        // Toggle sidebar visibility on small screens
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.querySelector('.sidebar');
+            const toggleButton = document.querySelector('.sidebar-toggle');
+
+            toggleButton.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+#grop{
+ 
+    color: rgb(19, 4, 95);
+    text-decoration-line: underline;
+    /* background: red; */
+}
+
+#para{
+
+    color: black;
+}
+
+
+
+#title{
+    font-weight: 900;
+    text-decoration:underline;
+    color: #050505;
+    text-overflow: clip;
+    text-shadow: 5px 3px 3px rgb(251, 249, 249);
+  
+}
+
+@keyframes shadowAnimation {
+    0% {
+        text-shadow: 0 0 15px rgba(255, 0, 0, 0.7); /* Red shadow */
+    }
+    25% {
+        text-shadow: 0 0 30px rgba(0, 255, 0, 0.7); /* Green shadow */
+    }
+    50% {
+        text-shadow: 0 0 45px rgba(0, 0, 255, 0.7); /* Blue shadow */
+    }
+    75% {
+        text-shadow: 0 0 60px rgba(255, 255, 0, 0.7); /* Yellow shadow */
+    }
+    100% {
+        text-shadow: 0 0 75px rgba(255, 0, 255, 0.7); /* Magenta shadow */
+    }
+}
+
+#title-1 {
+    font-size: 60px;
+    font-weight: bold;
+    color: #f9f9fc; 
+    animation: shadowAnimation 4s infinite;
+    text-align: center;
+}
+
+.pan{
+    background: lawngreen;
+}

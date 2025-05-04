@@ -1,0 +1,197 @@
+.side-menu {
+    width: 250px;
+    height: 100vh;
+    background-color: #2C3E50;
+    color: #ecf0f1;
+    padding: 20px;
+    box-sizing: border-box;
+    position: fixed;
+}
+
+.side-menu .brand-name {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.side-menu ul {
+    list-style: none;
+    padding: 0;
+}
+
+.side-menu ul li {
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+
+
+.side-menu ul li span {
+    font-size: 18px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+.content {
+    margin-left: 250px;
+    margin-top: 80px;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #ecf0f1;
+    /* height: calc(100vh - 80px); */
+    /* overflow-y: auto; */
+    width: 100%;
+}
+
+.content-2 {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    width: 100%;
+}
+
+
+
+
+
+
+
+
+.cards {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin: 10px;
+    flex: 1;
+    max-width: 300px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card .box h1 {
+    font-size: 2.5rem;
+    margin: 0;
+}
+
+.card .box h3 {
+    font-size: 1rem;
+    margin: 5px 0 0 0;
+}
+
+
+
+
+
+
+
+
+.recent-payments {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    flex: 2;
+    margin-right: 20px;
+    width: 100%;
+}
+
+.recent-payments .title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.recent-payments .btn {
+    background-color: #3498db;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.recent-payments table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.recent-payments table th, 
+.recent-payments table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.recent-payments table th {
+    background-color: #ecf0f1;
+}
+
+
+
+
+
+
+.new-students {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    flex: 1;
+}
+
+.new-students .title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.new-students .btn {
+    background-color: #3498db;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.new-students table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.new-students table th, 
+.new-students table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.new-students table th {
+    background-color: #ecf0f1;
+}
+
+
