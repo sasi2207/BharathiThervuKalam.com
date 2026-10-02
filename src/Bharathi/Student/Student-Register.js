@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
 import Logo from '../img1/Logo.png';
-import { api } from '../Api/Api';
+import { api, authApi, studentApi, paymentApi } from '../Api/Api';
 
 export default function StudentRegisterForm() {
   const navigate = useNavigate();
@@ -150,7 +150,7 @@ export default function StudentRegisterForm() {
 
   const handlePaymentSuccess = async (paymentResponse) => {
     try {
-      const response = await api.post('/student_register.php', {
+      const response = await authApi.studentRegister({
         ...user,
         paymentId: paymentResponse.razorpay_payment_id || 'OFFLINE_PASS',
       });
@@ -162,7 +162,7 @@ export default function StudentRegisterForm() {
         confirmButtonColor: '#0b1e42'
       }).then(async () => {
         try {
-          const pdfResponse = await api.get('/exportToPDF.php', { responseType: 'blob' });
+          const pdfResponse = await studentApi.exportPdf();
           const url = window.URL.createObjectURL(new Blob([pdfResponse.data]));
           const link = document.createElement('a');
           link.href = url;
@@ -223,7 +223,7 @@ export default function StudentRegisterForm() {
     // If Razorpay is loaded and configured
     if (window.Razorpay) {
       try {
-        const resp = await api.post('/payment_order.php', { amount: user.amount || 1 }).catch(() => null);
+        const resp = await paymentApi.createOrder(user.amount || 1).catch(() => null);
         const orderData = resp ? resp.data : null;
 
         const options = {

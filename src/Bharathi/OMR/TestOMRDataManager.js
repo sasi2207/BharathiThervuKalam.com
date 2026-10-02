@@ -1,5 +1,6 @@
 // Centralized Test Series, Question Papers, Master Answer Keys and OMR Validation Engine
 // Supports TNPSC (Group 1, 2, 2A, 4) and TNUSRB (SI, PC) examination standards
+import { omrApi } from '../Api/Api';
 
 export const DEFAULT_OMR_TESTS = [
   {
@@ -518,6 +519,21 @@ export const saveMasterTest = (testData) => {
   } catch (e) {
     console.error('Failed to save test in storage', e);
   }
+
+  // Dispatch sync to Python MySQL backend
+  try {
+    const keysMap = {};
+    (testData.questions || []).forEach((q) => {
+      if (q && q.qNo) keysMap[q.qNo] = q.correctKey;
+    });
+    if (Object.keys(keysMap).length > 0) {
+      omrApi.saveMasterKeys({
+        test_id: testData.id,
+        keys: keysMap,
+      }).catch(() => null);
+    }
+  } catch (err) {}
+
   return updatedList;
 };
 
@@ -642,6 +658,24 @@ export const evaluateOMRSubmission = ({
   } catch (err) {
     console.error('Failed to save OMR submission', err);
   }
+
+  // Dispatch asynchronous sync to Python MySQL backend API
+  try {
+    omrApi.submitOMR({
+      testId: test.id,
+      rollNo,
+      studentName,
+      bookletSeries,
+      candidateAnswers,
+      timeSpentSeconds,
+    }).then((res) => {
+      if (res?.data?.submissionId) {
+        console.log('[OMR Engine] Synced submission to MySQL backend:', res.data.submissionId);
+      }
+    }).catch(() => {
+      // Offline fallback silent
+    });
+  } catch (backendErr) {}
 
   return submissionResult;
 };

@@ -197,6 +197,8 @@ export const saveCourseItem = (courseKey, newItem) => {
   try {
     localStorage.setItem(getStorageKey(courseKey), JSON.stringify(updated));
   } catch (e) {}
+  // Sync with Python backend
+  api.post(`/api/courses/${courseKey}`, created).catch(() => {});
   return created;
 };
 
@@ -208,6 +210,8 @@ export const updateCourseItem = (courseKey, id, updatedFields) => {
   try {
     localStorage.setItem(getStorageKey(courseKey), JSON.stringify(updated));
   } catch (e) {}
+  // Sync with Python backend
+  api.put(`/api/courses/${courseKey}/${id}`, updatedFields).catch(() => {});
   return updated;
 };
 
@@ -217,6 +221,8 @@ export const deleteCourseItem = (courseKey, id) => {
   try {
     localStorage.setItem(getStorageKey(courseKey), JSON.stringify(updated));
   } catch (e) {}
+  // Sync with Python backend
+  api.delete(`/api/courses/${courseKey}/${id}`).catch(() => {});
   return updated;
 };
 

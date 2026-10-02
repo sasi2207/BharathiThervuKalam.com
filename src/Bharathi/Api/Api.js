@@ -1,11 +1,43 @@
 import axios from "axios";
 
-// 1. Resolve Base URL globally
-export const BASE_URL =
-  process.env.REACT_APP_API_URL ||
-  (typeof window !== "undefined" && window.location.origin.includes("localhost")
-    ? "https://www.bharathi.techsasi.com/techsasi/"
-    : "https://www.bharathi.techsasi.com/techsasi/");
+/**
+ * =============================================================================
+ * Bharathi Thervukalam - Centralized API Service Layer
+ * Fully Integrated with Python + MySQL Backend (Flask / PyMySQL)
+ * Supports Authentication, Courses, Test Series, Digital OMR Evaluator, 
+ * Students, Faculty, and Achievers modules.
+ * =============================================================================
+ */
+
+// 1. Resolve Base URL dynamically: Priority: ENV -> localStorage override -> Localhost backend (port 5000) -> Relative root
+export const BASE_URL = (() => {
+  if (process.env.REACT_APP_API_URL) {
+    const url = process.env.REACT_APP_API_URL.trim();
+    return url.endsWith("/") ? url : `${url}/`;
+  }
+  if (typeof window !== "undefined") {
+    const custom = localStorage.getItem("backend_api_url");
+    if (custom && custom.trim()) {
+      return custom.endsWith("/") ? custom.trim() : `${custom.trim()}/`;
+    }
+    // When running locally on dev server, route to Python MySQL backend on port 5000
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return "http://localhost:5000/";
+    }
+  }
+  // Standard relative base for production & dev proxy
+  return "/";
+})();
+
+// Helper to manually switch or test backend URL at runtime
+export const setCustomBackendUrl = (url) => {
+  if (url) {
+    localStorage.setItem("backend_api_url", url);
+  } else {
+    localStorage.removeItem("backend_api_url");
+  }
+  window.location.reload();
+};
 
 // 2. High-quality default mock/fallback data for offline & development resilience
 export const DEFAULT_FACULTY = [
@@ -142,7 +174,7 @@ export const DEFAULT_TESTS = [
 // 3. Create Primary Axios Client
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json, text/plain, */*",
@@ -177,16 +209,16 @@ api.interceptors.response.use(
     const method = error.config?.method?.toLowerCase();
 
     if (method === "get") {
-      if (url.includes("staff_view.php") || url.includes("group1_all.php")) {
-        console.warn(`[Global API] Returning fallback faculty data for ${url}`);
+      if (url.includes("/api/faculty") || url.includes("staff_view.php") || url.includes("group1_all.php")) {
+        console.warn(`[Python API] Returning fallback faculty data for ${url}`);
         return Promise.resolve({ data: DEFAULT_FACULTY, status: 200, statusText: "OK (Fallback)" });
       }
-      if (url.includes("achivers_all.php")) {
-        console.warn(`[Global API] Returning fallback achievers data for ${url}`);
+      if (url.includes("/api/achievers") || url.includes("achivers_all.php")) {
+        console.warn(`[Python API] Returning fallback achievers data for ${url}`);
         return Promise.resolve({ data: DEFAULT_ACHIEVERS, status: 200, statusText: "OK (Fallback)" });
       }
-      if (url.includes("test_all.php")) {
-        console.warn(`[Global API] Returning fallback tests data for ${url}`);
+      if (url.includes("/api/tests") || url.includes("test_all.php")) {
+        console.warn(`[Python API] Returning fallback tests data for ${url}`);
         return Promise.resolve({ data: DEFAULT_TESTS, status: 200, statusText: "OK (Fallback)" });
       }
     }
@@ -224,211 +256,243 @@ export const clearAuthToken = () => {
   } catch (e) {}
 };
 
-// 5. Global Domain API Services (All converted to .php endpoints)
+// =============================================================================
+// 5. PYTHON + MYSQL BACKEND API SERVICES (Migrated from PHP to Python REST)
+// =============================================================================
 
 // Authentication Service
 export const authApi = {
-  studentLogin: (credentials) => api.post("student/student_login.php", credentials),
-  studentRegister: (data) => api.post("student/student_register.php", data),
-  studentForgotPassword: (email) => api.post("student/student_forgot_password.php", { email }),
+  // Student Auth
+  studentLogin: (credentials) =>
+    api.post("/api/auth/student/login", credentials).catch(() => api.post("student/student_login.php", credentials)),
+  studentRegister: (data) =>
+    api.post("/api/auth/student/register", data).catch(() => api.post("student/student_register.php", data)),
+  studentForgotPassword: (email) =>
+    api.post("/api/auth/student/forgot-password", { email }).catch(() => api.post("student/student_forgot_password.php", { email })),
 
-  staffLogin: (credentials) => api.post("staff/staff_login.php", credentials),
-  staffRegister: (data) => api.post("staff/staff_register.php", data),
-  staffForgotPassword: (email) => api.post("staff/staff_forgot_password.php", { email }),
+  // Staff Auth
+  staffLogin: (credentials) =>
+    api.post("/api/auth/staff/login", credentials).catch(() => api.post("staff/staff_login.php", credentials)),
+  staffRegister: (data) =>
+    api.post("/api/auth/staff/register", data).catch(() => api.post("staff/staff_register.php", data)),
+  staffForgotPassword: (email) =>
+    api.post("/api/auth/staff/forgot-password", { email }).catch(() => api.post("staff/staff_forgot_password.php", { email })),
 
-  adminLogin: (credentials) => api.post("admin/admin_login.php", credentials),
-  adminRegister: (data) => api.post("admin/admin_register.php", data),
+  // Admin Auth
+  adminLogin: (credentials) =>
+    api.post("/api/auth/admin/login", credentials).catch(() => api.post("admin/admin_login.php", credentials)),
+  adminRegister: (data) =>
+    api.post("/api/auth/admin/register", data).catch(() => api.post("admin/admin_register.php", data)),
 };
 
 // Standalone Helper: Register Admin
 export const registerAdmin = async (adminData) => {
   try {
-    const response = await api.post("admin/admin_register.php", adminData);
+    const response = await api.post("/api/auth/admin/register", adminData).catch(() => api.post("admin/admin_register.php", adminData));
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message || error;
   }
 };
 
-// Faculty & Mentors Service
+// Faculty & Mentors Service (Python /api/faculty)
 export const facultyApi = {
-  getAll: () => api.get("/staff_view_all.php"),
-  getGroup1Faculty: () => api.get("/group1_all.php"),
+  getAll: () => api.get("/api/faculty").catch(() => api.get("/staff_view_all.php")),
+  getGroup1Faculty: () => api.get("/api/courses/group1").catch(() => api.get("/group1_all.php")),
   save: (formData) =>
-    api.post("/faculty_save.php", formData, {
+    api.post("/api/faculty", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-    }),
+    }).catch(() => api.post("/faculty_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
   saveGroup1: (formData) =>
-    api.post("/group1_save.php", formData, {
+    api.post("/api/courses/group1", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-    }),
+    }).catch(() => api.post("/group1_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
   update: (id, formData) =>
-    api.post(`/group1_update.php?id=${id}`, formData, {
+    api.put(`/api/faculty/${id}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
-    }),
-  delete: (id) => api.delete(`/group1_delete.php?id=${id}`),
+    }).catch(() => api.post(`/group1_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+  delete: (id) => api.delete(`/api/faculty/${id}`).catch(() => api.delete(`/group1_delete.php?id=${id}`)),
 };
 
-// Achievers & Results Service
+// Achievers & Results Service (Python /api/achievers)
 export const achieversApi = {
-  getAll: () => api.get("/achivers_all.php"),
+  getAll: () => api.get("/api/achievers").catch(() => api.get("/achivers_all.php")),
   save: (formData) =>
-    api.post("/achivers_save.php", formData, {
+    api.post("/api/achievers", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-    }),
+    }).catch(() => api.post("/achivers_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
   update: (id, formData) =>
-    api.post(`/achivers_update.php?id=${id}`, formData, {
+    api.put(`/api/achievers/${id}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
-    }),
-  delete: (id) => api.delete(`/achivers_delete.php?id=${id}`),
+    }).catch(() => api.post(`/achivers_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+  delete: (id) => api.delete(`/api/achievers/${id}`).catch(() => api.delete(`/achivers_delete.php?id=${id}`)),
 };
 
-// Test Series & Schedules Service
+// Test Series & Schedules Service (Python /api/tests)
 export const testApi = {
-  getAll: () => api.get("/test_all.php"),
+  getAll: () => api.get("/api/tests").catch(() => api.get("/test_all.php")),
   upload: (formData) =>
-    api.post("/test_upload.php", formData, {
+    api.post("/api/tests", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-    }),
-  delete: (id) => api.delete(`/test_delete.php?id=${id}`),
-  download: (id) => api.get(`/test_download.php?id=${id}`, { responseType: "blob" }),
+    }).catch(() => api.post("/test_upload.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
+  update: (id, data) => api.put(`/api/tests/${id}`, data).catch(() => api.post(`/test_update.php?id=${id}`, data)),
+  delete: (id) => api.delete(`/api/tests/${id}`).catch(() => api.delete(`/test_delete.php?id=${id}`)),
+  download: (id) => api.get(`/api/tests/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/test_download.php?id=${id}`, { responseType: "blob" })),
 };
 
-// TNPSC Groups Service
+// TNPSC Groups Service (Python /api/courses/<group>)
 export const groupsApi = {
   group1: {
-    getAll: () => api.get("/group1_all.php"),
+    getAll: () => api.get("/api/courses/group1").catch(() => api.get("/group1_all.php")),
     save: (formData) =>
-      api.post("/group1_save.php", formData, {
+      api.post("/api/courses/group1", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/group1_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/group1_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/group1/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/group1_delete.php?id=${id}`),
+      }).catch(() => api.post(`/group1_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/group1/${id}`).catch(() => api.delete(`/group1_delete.php?id=${id}`)),
   },
   group2: {
-    getAll: () => api.get("/group2_all.php"),
+    getAll: () => api.get("/api/courses/group2").catch(() => api.get("/group2_all.php")),
     save: (formData) =>
-      api.post("/group2_save.php", formData, {
+      api.post("/api/courses/group2", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/group2_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/group2_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/group2/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/group2_delete.php?id=${id}`),
+      }).catch(() => api.post(`/group2_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/group2/${id}`).catch(() => api.delete(`/group2_delete.php?id=${id}`)),
   },
   group2A: {
-    getAll: () => api.get("/group2A_all.php"),
+    getAll: () => api.get("/api/courses/group2A").catch(() => api.get("/group2A_all.php")),
     save: (formData) =>
-      api.post("/group2A_save.php", formData, {
+      api.post("/api/courses/group2A", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/group2A_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/group2A_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/group2A/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/group2A_delete.php?id=${id}`),
+      }).catch(() => api.post(`/group2A_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/group2A/${id}`).catch(() => api.delete(`/group2A_delete.php?id=${id}`)),
   },
   group4: {
-    getAll: () => api.get("/group4_all.php"),
+    getAll: () => api.get("/api/courses/group4").catch(() => api.get("/group4_all.php")),
     save: (formData) =>
-      api.post("/group4_save.php", formData, {
+      api.post("/api/courses/group4", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/group4_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/group4_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/group4/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/group4_delete.php?id=${id}`),
-    download: (id) => api.get(`/group4_download.php?id=${id}`, { responseType: "blob" }),
+      }).catch(() => api.post(`/group4_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/group4/${id}`).catch(() => api.delete(`/group4_delete.php?id=${id}`)),
+    download: (id) => api.get(`/api/courses/group4/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/group4_download.php?id=${id}`, { responseType: "blob" })),
   },
 };
 
-// TNUSRB Police Service
+// TNUSRB Police Service (Python /api/courses/<police_category>)
 export const tnusrbApi = {
   common: {
-    getAll: () => api.get("/tnusrbs_view.php"),
+    getAll: () => api.get("/api/courses/commonRecruitment").catch(() => api.get("/tnusrbs_view.php")),
     save: (formData) =>
-      api.post("/tnusrbs_save.php", formData, {
+      api.post("/api/courses/commonRecruitment", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/tnusrbs_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/tnusrbs_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/commonRecruitment/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/tnusrbs_delete.php?id=${id}`),
-    download: (id) => api.get(`/tnusrbs_download.php?id=${id}`, { responseType: "blob" }),
+      }).catch(() => api.post(`/tnusrbs_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/commonRecruitment/${id}`).catch(() => api.delete(`/tnusrbs_delete.php?id=${id}`)),
+    download: (id) => api.get(`/api/courses/commonRecruitment/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/tnusrbs_download.php?id=${id}`, { responseType: "blob" })),
   },
   technical: {
-    getAll: () => api.get("/technical_view.php"),
+    getAll: () => api.get("/api/courses/siTechnical").catch(() => api.get("/technical_view.php")),
     save: (formData) =>
-      api.post("/technical_save.php", formData, {
+      api.post("/api/courses/siTechnical", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/technical_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/technical_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/siTechnical/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/technical_delete.php?id=${id}`),
-    download: (id) => api.get(`/technical_download.php?id=${id}`, { responseType: "blob" }),
+      }).catch(() => api.post(`/technical_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/siTechnical/${id}`).catch(() => api.delete(`/technical_delete.php?id=${id}`)),
+    download: (id) => api.get(`/api/courses/siTechnical/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/technical_download.php?id=${id}`, { responseType: "blob" })),
   },
   fingerprint: {
-    getAll: () => api.get("/fingerprints_view.php"),
+    getAll: () => api.get("/api/courses/siFingerprint").catch(() => api.get("/fingerprints_view.php")),
     save: (formData) =>
-      api.post("/fingerprints_save.php", formData, {
+      api.post("/api/courses/siFingerprint", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/fingerprints_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/fingerprints_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/siFingerprint/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/fingerprints_delete.php?id=${id}`),
-    download: (id) => api.get(`/fingerprints_download.php?id=${id}`, { responseType: "blob" }),
+      }).catch(() => api.post(`/fingerprints_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/siFingerprint/${id}`).catch(() => api.delete(`/fingerprints_delete.php?id=${id}`)),
+    download: (id) => api.get(`/api/courses/siFingerprint/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/fingerprints_download.php?id=${id}`, { responseType: "blob" })),
   },
   join: {
-    getAll: () => api.get("/join_view.php"),
+    getAll: () => api.get("/api/courses/jointRecruitment").catch(() => api.get("/join_view.php")),
     save: (formData) =>
-      api.post("/join_save.php", formData, {
+      api.post("/api/courses/jointRecruitment", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
+      }).catch(() => api.post("/join_save.php", formData, { headers: { "Content-Type": "multipart/form-data" } })),
     update: (id, formData) =>
-      api.post(`/join_update.php?id=${id}`, formData, {
+      api.put(`/api/courses/jointRecruitment/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      }),
-    delete: (id) => api.delete(`/join_delete.php?id=${id}`),
-    download: (id) => api.get(`/join_download.php?id=${id}`, { responseType: "blob" }),
+      }).catch(() => api.post(`/join_update.php?id=${id}`, formData, { headers: { "Content-Type": "multipart/form-data" } })),
+    delete: (id) => api.delete(`/api/courses/jointRecruitment/${id}`).catch(() => api.delete(`/join_delete.php?id=${id}`)),
+    download: (id) => api.get(`/api/courses/jointRecruitment/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/join_download.php?id=${id}`, { responseType: "blob" })),
   },
 };
 
-// Staff Service
+// Staff Management Service (Python /api/staff)
 export const staffApi = {
-  getAll: () => api.get("/staff_view_all.php"),
-  update: (id, data) => api.post(`/staff_update.php?id=${id}`, data),
-  delete: (id) => api.delete(`/staff_delete.php?id=${id}`),
+  getAll: () => api.get("/api/staff").catch(() => api.get("/staff_all.php").catch(() => api.get("/staff_view_all.php"))),
+  update: (id, data) => api.put(`/api/staff/${id}`, data).catch(() => api.post(`/staff_update.php?id=${id}`, data)),
+  delete: (id) => api.delete(`/api/staff/${id}`).catch(() => api.delete(`/staff_delete.php?id=${id}`)),
 };
 
-// Students Service
+// Students Management Service (Python /api/students)
 export const studentApi = {
-  getAll: () => api.get("/student_all.php"),
-  exportPdf: () => api.get("/exportToPDF.php", { responseType: "blob" }),
-  delete: (id) => api.delete(`/student_delete.php?id=${id}`),
+  getAll: () => api.get("/api/students").catch(() => api.get("/student_all.php")),
+  exportPdf: () => api.get("/api/students/export-pdf", { responseType: "blob" }).catch(() => api.get("/exportToPDF.php", { responseType: "blob" })),
+  delete: (id) => api.delete(`/api/students/${id}`).catch(() => api.delete(`/student_delete.php?id=${id}`)),
 };
 
-// Syllabus Service
+// Syllabus Service (Python /api/syllabus)
 export const syllabusApi = {
-  getAll: () => api.get("/syllabus_all.php"),
-  upload: (data) => api.post("/syllabus_upload.php", data),
-  update: (id, data) => api.post(`/syllabus_update.php?id=${id}`, data),
-  delete: (id) => api.delete(`/syllabus_delete.php?id=${id}`),
-  download: (id) => api.get(`/syllabus_download.php?id=${id}`, { responseType: "blob" }),
+  getAll: () => api.get("/api/syllabus").catch(() => api.get("/syllabus_all.php")),
+  upload: (data) => api.post("/api/syllabus", data).catch(() => api.post("/syllabus_upload.php", data)),
+  update: (id, data) => api.put(`/api/syllabus/${id}`, data).catch(() => api.post(`/syllabus_update.php?id=${id}`, data)),
+  delete: (id) => api.delete(`/api/syllabus/${id}`).catch(() => api.delete(`/syllabus_delete.php?id=${id}`)),
+  download: (id) => api.get(`/api/syllabus/${id}/download`, { responseType: "blob" }).catch(() => api.get(`/syllabus_download.php?id=${id}`, { responseType: "blob" })),
 };
 
-// Payment Service
+// Payment Service (Python /api/payment/create-order)
 export const paymentApi = {
-  createOrder: (amount = 1) => api.post("/payment_order.php", { amount }),
+  createOrder: (amount = 1) =>
+    api.post("/api/payment/create-order", { amount }).catch(() => api.post("/payment_order.php", { amount })),
+};
+
+// OMR Master Keys & Automated Evaluation Engine Service (Python /api/omr/...)
+export const omrApi = {
+  getTests: () => api.get("/api/omr/tests").catch(() => api.get("/omr_tests.php")),
+  getMasterKeys: (testId) =>
+    api.get(`/api/omr/master-keys?test_id=${testId}`).catch(() => api.get(`/omr_master_keys.php?test_id=${testId}`)),
+  saveMasterKeys: (data) =>
+    api.post("/api/omr/master-keys", data).catch(() => api.post("/omr_master_save.php", data)),
+  submitOMR: (submissionData) =>
+    api.post("/api/omr/submit", submissionData).catch(() => api.post("/omr_submit.php", submissionData)),
+  getSubmissions: (rollNo) => {
+    const query = rollNo ? `?roll_no=${encodeURIComponent(rollNo)}` : "";
+    return api.get(`/api/omr/submissions${query}`).catch(() => api.get(`/omr_submissions_all.php${query}`));
+  },
+  getSubmissionDetails: (submissionCode) =>
+    api.get(`/api/omr/submissions/${submissionCode}`),
 };
 
 export default api;

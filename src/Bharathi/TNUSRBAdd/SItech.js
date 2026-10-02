@@ -9,7 +9,7 @@ const SItechAdd = () => {
       title="Sub-Inspector of Police (Technical) - Add"
       subtitle="Publish ECE, Telecommunication, and General Knowledge syllabus for SI Technical exam."
       viewRoute="/SITechnical-View"
-      apiEndpoint="/technical_save.php"
+      apiEndpoint="/api/courses/siTechnical"
     />
   );
 };

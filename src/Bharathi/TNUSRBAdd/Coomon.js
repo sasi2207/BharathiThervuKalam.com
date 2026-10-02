@@ -9,7 +9,7 @@ const CommonAdd = () => {
       title="Common Recruitment (Police Constables, Warders & Firemen) - Add"
       subtitle="Publish SSLC standard Tamil eligibility, general knowledge, and psychology syllabus."
       viewRoute="/Common-View"
-      apiEndpoint="/tnusrbs_save.php"
+      apiEndpoint="/api/courses/commonRecruitment"
     />
   );
 };

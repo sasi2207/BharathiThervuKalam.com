@@ -31,10 +31,14 @@
     "sweetalert2": "^11.12.4",
     "web-vitals": "^2.1.4"
   },
+  "proxy": "http://localhost:5000",
   "scripts": {
     "dev": "cross-env PORT=3000 HOST=0.0.0.0 DISABLE_ESLINT_PLUGIN=true react-scripts start",
     "start": "cross-env DISABLE_ESLINT_PLUGIN=true react-scripts start",
     "build": "cross-env DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "backend": "python3 backend/app.py",
+    "backend:standalone": "python3 backend/standalone_server.py",
+    "lint": "eslint src --ext .js --max-warnings 100",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

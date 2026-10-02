@@ -57,21 +57,20 @@ export default function CourseAddTemplate({
 
     saveCourseItem(courseKey, newItem);
 
-    // Attempt backend save if endpoint specified
-    if (apiEndpoint) {
-      try {
-        const formData = new FormData();
-        formData.append('syllabus', syllabus);
-        formData.append('paper', paper);
-        formData.append('subject', subject);
-        if (file) formData.append('file', file);
-        await api.post(apiEndpoint, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }).catch((err) => {
-          console.warn('Backend upload skipped, saved locally:', err);
-        });
-      } catch (err) {}
-    }
+    // Attempt backend save via Python REST API
+    const targetEndpoint = apiEndpoint || `/api/courses/${courseKey}`;
+    try {
+      const formData = new FormData();
+      formData.append('syllabus', syllabus);
+      formData.append('paper', paper);
+      formData.append('subject', subject);
+      if (file) formData.append('file', file);
+      await api.post(targetEndpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).catch((err) => {
+        console.warn('Backend upload skipped, saved locally:', err);
+      });
+    } catch (err) {}
 
     setLoading(false);
 

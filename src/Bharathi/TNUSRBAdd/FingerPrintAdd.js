@@ -9,7 +9,7 @@ const FingerPrintAdd = () => {
       title="Sub-Inspector of Police (Finger Print) - Add"
       subtitle="Publish science, chemistry, physics, and forensic dactyloscopy syllabus documents."
       viewRoute="/FingerPrint-View"
-      apiEndpoint="/fingerprints_save.php"
+      apiEndpoint="/api/courses/siFingerprint"
     />
   );
 };
