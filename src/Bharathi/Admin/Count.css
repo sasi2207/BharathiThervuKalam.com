@@ -1,0 +1,26 @@
+.counter-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgb(250, 210, 33);
+  }
+  
+  .counter-item {
+    text-align: center;
+    margin: 10px;
+    flex: 1 1 200px; /* Adjust the minimum width as needed */
+  }
+  
+  .counter {
+    font-size: 2em;
+    font-weight: bold;
+  }
+  
+
+
+ 
+  
+  

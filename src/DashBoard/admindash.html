@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wall Poster</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #6e45e2, #88d3ce);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .poster {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .poster-container {
+      display: flex;
+      justify-content: space-around;
+    }
+    .poster-item {
+      text-align: center;
+    }
+    .poster-item img {
+      border-radius: 50%;
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      margin-bottom: 10px;
+    }
+    .poster-item h1 {
+      font-size: 1rem;
+      margin-bottom: 5px;
+      color: #6e45e2;
+    }
+    .poster-item p {
+      font-size: 0.9rem;
+      color: #333;
+    }
+    .poster-header h1 {
+      font-size: 2rem;
+      color: #6e45e2;
+    }
+    .poster-header h5 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 768px) {
+      .poster-container {
+        flex-wrap: wrap;
+      }
+      .poster-item {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+      .poster-item img {
+        width: 80px;
+        height: 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="poster">
+    <div class="poster-header text-center">
+      <h1>Congratulations</h1>
+      <h5>To Our Foundation Program Students</h5>
+    </div>
+    <div class="poster-container">
+      <!-- Poster 1 -->
+      <div class="poster-item">
+        <img src="https://www.stryx.com/cdn/shop/articles/man-looking-attractive.jpg?v=1666662774" alt="Candidate Image 1">
+        <h1>Sasi Kumar</h1>
+        <p>Year: 2024</p>
+        <p>Department: Computer Science And Mathematics</p>
+      </div>
+      
+      <!-- Poster 2 -->
+      <div class="poster-item">
+        <img src="https://www.stryx.com/cdn/shop/articles/man-looking-attractive.jpg?v=1666662774" alt="Candidate Image 2">
+        <h1>Jane Smith</h1>
+        <p>Year: 2023</p>
+        <p>Department: Mathematics</p>
+      </div>
+      
+      <!-- Poster 3 -->
+      <div class="poster-item">
+        <img src="https://www.stryx.com/cdn/shop/articles/man-looking-attractive.jpg?v=1666662774" alt="Candidate Image 3">
+        <h1>Emily Johnson</h1>
+        <p>Year: 2022</p>
+        <p>Department: Physics</p>
+      </div>
+      
+      <!-- Poster 4 -->
+      <div class="poster-item">
+        <img src="https://www.stryx.com/cdn/shop/articles/man-looking-attractive.jpg?v=1666662774" alt="Candidate Image 4">
+        <h1>Michael Brown</h1>
+        <p>Year: 2021</p>
+        <p>Department: Chemistry</p>
+      </div>
+
+      <!-- Poster 5 -->
+      <div class="poster-item">
+        <img src="https://www.stryx.com/cdn/shop/articles/man-looking-attractive.jpg?v=1666662774" alt="Candidate Image 5">
+        <h1>Sarah Davis</h1>
+        <p>Year: 2020</p>
+        <p>Department: Biology</p>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

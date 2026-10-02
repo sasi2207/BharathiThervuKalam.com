@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TNPSC Academy</title>
+<style>
+body {
+  background-color: #0066ff;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  color: white;
+}
+h1 {
+  font-size: 3em;
+  margin-top: 1em;
+}
+p {
+  font-size: 1.5em;
+}
+
+.counter {
+  font-size: 2em;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<div>
+  <p class="counter" id="count1">0</p>
+  <p class="counter" id="count2">0</p>
+  <p class="counter" id="count3">0</p>
+  <p class="counter" id="count4">0</p>
+</div>
+
+<script>
+// Function to animate the number
+function animateCount(elementId, start, end, duration) {
+  let element = document.getElementById(elementId);
+  let range = end - start;
+  let current = start;
+  let increment = end > start ? 1 : -1;
+  let stepTime = Math.abs(Math.floor(duration / range));
+  
+  let timer = setInterval(function() {
+    current += increment;
+    element.textContent = current;
+    if (current === end) {
+      clearInterval(timer);
+    }
+  }, stepTime);
+}
+
+// Animate the numbers
+window.onload = function() {
+  animateCount('count1', 0, 9, 2000);
+  animateCount('count2', 0, 240, 4000); 
+  animateCount('count3', 0, 500, 6000); 
+  animateCount('count4', 0, 700, 9000); 
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.card :hover{
+  
+    color: black;
+    /* font-size: 1.5rem; */
+}
+.card-title:hover{
+    color: black;
+   
+}
+

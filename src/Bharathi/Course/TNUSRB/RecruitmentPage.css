@@ -1,0 +1,100 @@
+/* RecruitmentPage.css */
+
+.recruitment-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  .section {
+    margin-bottom: 40px;
+  }
+  
+  .section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  
+  .section p {
+    line-height: 1.6;
+  }
+  
+  .section ul {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .section li {
+    margin-bottom: 5px;
+  }
+  
+
+  .table-container {
+    margin-bottom: 20px;
+    overflow-x: auto; /* Allows horizontal scrolling if the table is too wide */
+  }
+  
+  .responsive-table {
+    width: 100%;
+    border-collapse: collapse; /* Ensures borders between cells are collapsed */
+  }
+  
+  .responsive-table th, .responsive-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  .responsive-table th {
+    background-color: #f4f4f4;
+  }
+  
+  .notes-section {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+  }
+  
+  .notes-section h2 {
+    margin-top: 0;
+  }
+  
+  .notes-section ul {
+    list-style-type: disc;
+    margin: 0;
+    padding-left: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    .responsive-table thead {
+      display: none; /* Hide the table header on small screens */
+    }
+    
+    .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td {
+      display: block; /* Make table elements block-level for stacking */
+      width: 100%; /* Full width for each table element */
+    }
+    
+    .responsive-table td {
+      position: relative;
+      padding-left: 50%; /* Space for label */
+      text-align: right; /* Align text to the right */
+      border: none; /* Remove border on small screens */
+    }
+    
+    .responsive-table td::before {
+      content: attr(data-label); /* Display label for each cell */
+      position: absolute;
+      left: 0;
+      width: 45%;
+      padding-left: 10px;
+      font-weight: bold;
+      text-align: left;
+    }
+  }
+  
+  #sum{
+    color: red;
+  }

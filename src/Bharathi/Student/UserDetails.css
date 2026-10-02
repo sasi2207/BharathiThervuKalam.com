@@ -1,0 +1,48 @@
+/* UserDetails & Student Management Modern Styles */
+.user-details-container {
+  padding: 2.5rem 1rem;
+  max-width: 1240px;
+  margin: auto;
+}
+
+.table-title {
+  text-align: center;
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--navy-950);
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.custom-table th, .custom-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.custom-table thead th {
+  background-color: var(--navy-900);
+  color: #ffffff;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+}
+
+.custom-table tbody tr:hover {
+  background-color: var(--canvas-subtle);
+}
