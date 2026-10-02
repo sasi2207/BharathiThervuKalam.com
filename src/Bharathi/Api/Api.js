@@ -243,7 +243,7 @@ export const authApi = {
 // Standalone Helper: Register Admin
 export const registerAdmin = async (adminData) => {
   try {
-    const response = await api.post("/admin_register.php", adminData);
+    const response = await api.post("admin/admin_register.php", adminData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message || error;

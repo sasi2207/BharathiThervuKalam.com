@@ -4,6 +4,12 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Bootstrap CSS
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+// Bootstrap JS (Dropdown, Modal, Collapse போன்ற கூறுகளுக்கு தேவைப்பட்டால்)
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
