@@ -3,6 +3,11 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { motion } from 'framer-motion';
 import PageLoader from './Common/PageLoader';
 
+// Authentication & Security Guards
+import { AuthProvider } from './Auth/AuthContext';
+import ProtectedRoute from './Auth/ProtectedRoute';
+import Login from './Auth/Login';
+
 // Public Components
 import Header from './Header';
 import Footer from './Fotters';
@@ -71,7 +76,7 @@ import CommonView from './TNUSRBView/CommonView';
 import FingerPrintView from './TNUSRBView/FibgerPrintView';
 import SITechnicalView from './TNUSRBView/SITechnivalView';
 
-// Standard Layout Wrappers to prevent unkeyed array warnings
+// Standard Layout Wrappers
 const PublicLayout = ({ children }) => (
   <div className="app-wrapper">
     <Header />
@@ -121,7 +126,7 @@ const StaffDashLayout = ({ children }) => (
 
 function GoogleTranslate() {
   return (
-    <div>
+    <AuthProvider>
       <div id="google_translate_element"></div>
       
       <BrowserRouter>
@@ -151,8 +156,9 @@ function GoogleTranslate() {
           <Route path="/Payment" element={<RazorpayPayment />} />
 
           {/* User Authentication & Portals */}
+          <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
+          <Route path="/Login" element={<PublicLayout><Login /></PublicLayout>} />
           <Route path="/student-portal" element={<PublicLayout><StudentPortal /></PublicLayout>} />
-          <Route path="/student-dashboard" element={<PublicLayout><StudentDashboard /></PublicLayout>} />
           <Route path="/Student-Register" element={<PublicLayout><StudentRegisterForm /></PublicLayout>} />
           <Route path="/Student-Login" element={<PublicLayout><StudentLoginForm /></PublicLayout>} />
           <Route path="/Staff-Register" element={<PublicLayout><StaffRegisterForm /></PublicLayout>} />
@@ -162,44 +168,266 @@ function GoogleTranslate() {
           <Route path="/forgetpassword" element={<PublicLayout><ForgotPassword /></PublicLayout>} />
           <Route path="/forget-staffpassword" element={<PublicLayout><StaffForgotPassword /></PublicLayout>} />
 
-          {/* Staff & Admin Dashboards */}
-          <Route path="/Adm" element={<AdminLayout><Main /></AdminLayout>} />
-          <Route path="/StaffDash" element={<StaffDashLayout><Main /></StaffDashLayout>} />
-          <Route path="/Student-Details" element={<AdminLayout><UserDetails /></AdminLayout>} />
-          <Route path="/Student" element={<AdminLayout><StudentRegisterForm /></AdminLayout>} />
-          <Route path="/Staff" element={<AdminLayout><StaffRegisterForm /></AdminLayout>} />
-          <Route path="/Staff-View" element={<AdminLayout><StaffView /></AdminLayout>} />
-          <Route path="/Faculty-Add" element={<AdminLayout><FacultyForm /></AdminLayout>} />
-          <Route path="/Faculty-View" element={<AdminLayout><FacultyView /></AdminLayout>} />
-          <Route path="/Achivers-Add" element={<AdminLayout><AchieversForm /></AdminLayout>} />
-          <Route path="/Achivers-View" element={<AdminLayout><AchiversView /></AdminLayout>} />
-          <Route path="/Test-Add" element={<AdminLayout><TestForm /></AdminLayout>} />
-          <Route path="/Test-View" element={<AdminLayout><TestView /></AdminLayout>} />
-          <Route path="/OMR-Master" element={<AdminLayout><AdminOMRMaster /></AdminLayout>} />
-          <Route path="/admin/omr-keys" element={<AdminLayout><AdminOMRMaster /></AdminLayout>} />
+          {/* Protected Student Dashboard */}
+          <Route 
+            path="/student-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['student', 'staff', 'admin']}>
+                <PublicLayout><StudentDashboard /></PublicLayout>
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* TNPSC Admin */}
-          <Route path="/Group-I-Add" element={<AdminLayout><GroupI /></AdminLayout>} />
-          <Route path="/Group-I-View" element={<AdminLayout><GroupIView /></AdminLayout>} />
-          <Route path="/Group2-Add" element={<AdminLayout><GroupII /></AdminLayout>} />
-          <Route path="/Group2-View" element={<AdminLayout><GroupIIView /></AdminLayout>} />
-          <Route path="/Group2A-Add" element={<AdminLayout><GroupIIA /></AdminLayout>} />
-          <Route path="/Group2A-View" element={<AdminLayout><GroupIIAView /></AdminLayout>} />
-          <Route path="/Group4-Add" element={<AdminLayout><GroupIV /></AdminLayout>} />
-          <Route path="/Group4-View" element={<AdminLayout><GroupIVView /></AdminLayout>} />
+          {/* Protected Staff Workspace */}
+          <Route 
+            path="/StaffDash" 
+            element={
+              <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                <StaffDashLayout><Main /></StaffDashLayout>
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* TNUSRB Admin */}
-          <Route path="/SI-Technical" element={<AdminLayout><SItechAdd /></AdminLayout>} />
-          <Route path="/Tnusrb-Add" element={<AdminLayout><TnusrbForm /></AdminLayout>} />
-          <Route path="/Tnusrb-View" element={<AdminLayout><Tnusrb /></AdminLayout>} />
-          <Route path="/Common-Add" element={<AdminLayout><CommonAdd /></AdminLayout>} />
-          <Route path="/Common-View" element={<AdminLayout><CommonView /></AdminLayout>} />
-          <Route path="/FingerPrint-Add" element={<AdminLayout><FingerPrintAdd /></AdminLayout>} />
-          <Route path="/FingerPrint-View" element={<AdminLayout><FingerPrintView /></AdminLayout>} />
-          <Route path="/SITechnical-View" element={<AdminLayout><SITechnicalView /></AdminLayout>} />
+          {/* Protected Admin Console & Management Routes */}
+          <Route 
+            path="/Adm" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><Main /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Student-Details" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><UserDetails /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Student" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><StudentRegisterForm /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Staff" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><StaffRegisterForm /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Staff-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><StaffView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Faculty-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><FacultyForm /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Faculty-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><FacultyView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Achivers-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><AchieversForm /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Achivers-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><AchiversView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Test-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><TestForm /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Test-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><TestView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/OMR-Master" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><AdminOMRMaster /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/omr-keys" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><AdminOMRMaster /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* TNPSC Admin Routes */}
+          <Route 
+            path="/Group-I-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><GroupI /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group-I-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><GroupIView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group2-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><GroupII /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group2-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><GroupIIView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group2A-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><GroupIIA /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group2A-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><GroupIIAView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group4-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><GroupIV /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Group4-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><GroupIVView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* TNUSRB Admin Routes */}
+          <Route 
+            path="/SI-Technical" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><SItechAdd /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Tnusrb-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><TnusrbForm /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Tnusrb-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><Tnusrb /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Common-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><CommonAdd /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Common-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><CommonView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/FingerPrint-Add" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout><FingerPrintAdd /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/FingerPrint-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><FingerPrintView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/SITechnical-View" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <AdminLayout><SITechnicalView /></AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </BrowserRouter>
-    </div>
+    </AuthProvider>
   );
 }
 

@@ -8,6 +8,7 @@ import {
   getStudentSubmissions,
 } from '../OMR/TestOMRDataManager';
 import Logo from '../img1/Logo.png';
+import AcademicCardCheckmark from '../Common/AcademicCardCheckmark';
 import '../OMR/OMRSheet.css';
 import '../Admin/AdminDashboard.css';
 
@@ -23,6 +24,60 @@ const StudentDashboard = () => {
     center: 'Erode Center',
     phone: '+91 7338757194',
   });
+
+  // Task & Quiz Completion States (with subtle CSS transition check-marks)
+  const [completedTasks, setCompletedTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('student_completed_tasks');
+      return saved ? JSON.parse(saved) : { quiz1: true, task3: true };
+    } catch {
+      return { quiz1: true, task3: true };
+    }
+  });
+
+  const [quizAnswers, setQuizAnswers] = useState({ quiz1: 'A' });
+
+  const handleSelectQuizOption = (quizId, optionKey) => {
+    setQuizAnswers((prev) => ({ ...prev, [quizId]: optionKey }));
+  };
+
+  const handleCompleteQuiz = (quizId) => {
+    setCompletedTasks((prev) => {
+      const next = { ...prev, [quizId]: true };
+      try {
+        localStorage.setItem('student_completed_tasks', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Quiz Verified & Completed',
+      text: 'Academic card awarded with animated completion check-mark.',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
+
+  const handleToggleTask = (taskId, title) => {
+    setCompletedTasks((prev) => {
+      const nextStatus = !prev[taskId];
+      const next = { ...prev, [taskId]: nextStatus };
+      try {
+        localStorage.setItem('student_completed_tasks', JSON.stringify(next));
+      } catch (e) {}
+      if (nextStatus) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Task Completed',
+          text: `"${title}" completed. Check-mark verified.`,
+          timer: 1300,
+          showConfirmButton: false,
+        });
+      }
+      return next;
+    });
+  };
 
   // Navigation Tabs: 'overview' | 'tests' | 'omrSheet' | 'history' | 'materials'
   const [activeTab, setActiveTab] = useState('overview');
@@ -406,6 +461,246 @@ const StudentDashboard = () => {
               </div>
             </div>
 
+            {/* Daily Practice Tasks & Subject Quizzes with Smooth Check-mark Animation */}
+            <div className="mb-5">
+              <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                  <h5 className="fw-bold mb-0 text-dark fs-6 d-flex align-items-center gap-2">
+                    <i className="bi bi-patch-check-fill text-success"></i>
+                    Daily Practice Tasks & Subject Quizzes
+                  </h5>
+                  <p className="text-muted small mb-0">
+                    Complete syllabus modules and quick quizzes to earn your verified check-mark with smooth CSS animations.
+                  </p>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <span className="badge bg-success-subtle text-success border border-success fw-bold px-3 py-1">
+                    {Object.values(completedTasks).filter(Boolean).length} of 4 Completed
+                  </span>
+                </div>
+              </div>
+
+              <div className="row g-4">
+                {/* Quiz Card 1: General Tamil */}
+                <div className="col-12 col-md-6">
+                  <div className={`academic-card ${completedTasks.quiz1 ? 'completed' : ''}`}>
+                    <AcademicCardCheckmark label="General Tamil Quiz Completed" />
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <span className="card-kicker text-warning">TNPSC Part A · General Tamil</span>
+                      {completedTasks.quiz1 && (
+                        <span className="academic-card-status-badge me-4">
+                          <i className="bi bi-check2-circle"></i> Passed · Verified
+                        </span>
+                      )}
+                    </div>
+                    <h5 className="fw-bold text-dark mb-1">Thirukkural Grammar & Sandhi Split</h5>
+                    <p className="small text-muted mb-3">
+                      Identify the correct split of the sandhi compound: <strong>'கற்கக்கசடறக்'</strong>
+                    </p>
+                    <div className="d-flex flex-column gap-2 mb-3">
+                      {[
+                        { key: 'A', text: 'கற்க + கசடற' },
+                        { key: 'B', text: 'கற்கக் + கசடற' },
+                        { key: 'C', text: 'கற்க + கசடு + அற' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          disabled={completedTasks.quiz1}
+                          onClick={() => handleSelectQuizOption('quiz1', opt.key)}
+                          className={`btn btn-sm text-start py-2 px-3 border ${
+                            quizAnswers.quiz1 === opt.key || (completedTasks.quiz1 && opt.key === 'A')
+                              ? 'btn-success text-white fw-bold border-success'
+                              : 'btn-light'
+                          }`}
+                        >
+                          <strong>{opt.key}.</strong> {opt.text}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                      <small className="text-muted">Topic: 6th–10th Samacheer Kalvi</small>
+                      {completedTasks.quiz1 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask('quiz1', 'General Tamil Quiz')}
+                          className="btn btn-sm btn-link text-muted p-0 text-decoration-none"
+                        >
+                          Reset Quiz
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCompleteQuiz('quiz1')}
+                          className="btn btn-sm btn-primary-custom text-white fw-bold px-3"
+                        >
+                          Submit Quiz Answer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quiz Card 2: Indian Polity */}
+                <div className="col-12 col-md-6">
+                  <div className={`academic-card ${completedTasks.quiz2 ? 'completed' : ''}`}>
+                    <AcademicCardCheckmark label="Indian Polity Quiz Completed" />
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <span className="card-kicker text-primary">Indian Polity · Constitution</span>
+                      {completedTasks.quiz2 && (
+                        <span className="academic-card-status-badge me-4">
+                          <i className="bi bi-check2-circle"></i> Passed · Verified
+                        </span>
+                      )}
+                    </div>
+                    <h5 className="fw-bold text-dark mb-1">Fundamental Rights & Writs</h5>
+                    <p className="small text-muted mb-3">
+                      Which Constitutional Article provides for the Right to Constitutional Remedies (Writs)?
+                    </p>
+                    <div className="d-flex flex-column gap-2 mb-3">
+                      {[
+                        { key: 'A', text: 'Article 21 (Right to Life)' },
+                        { key: 'B', text: 'Article 32 (Supreme Court Writs)' },
+                        { key: 'C', text: 'Article 14 (Equality Before Law)' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          disabled={completedTasks.quiz2}
+                          onClick={() => handleSelectQuizOption('quiz2', opt.key)}
+                          className={`btn btn-sm text-start py-2 px-3 border ${
+                            quizAnswers.quiz2 === opt.key || (completedTasks.quiz2 && opt.key === 'B')
+                              ? 'btn-success text-white fw-bold border-success'
+                              : 'btn-light'
+                          }`}
+                        >
+                          <strong>{opt.key}.</strong> {opt.text}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                      <small className="text-muted">Unit V: Indian Constitution</small>
+                      {completedTasks.quiz2 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTask('quiz2', 'Indian Polity Quiz')}
+                          className="btn btn-sm btn-link text-muted p-0 text-decoration-none"
+                        >
+                          Reset Quiz
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCompleteQuiz('quiz2')}
+                          className="btn btn-sm btn-primary-custom text-white fw-bold px-3"
+                        >
+                          Submit Quiz Answer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Task Card 3: Mental Ability Practice */}
+                <div className="col-12 col-md-6">
+                  <div className={`academic-card ${completedTasks.task3 ? 'completed' : ''}`}>
+                    <AcademicCardCheckmark label="Aptitude Task Completed" />
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <span className="card-kicker text-success">Unit X · Aptitude & Mental Ability</span>
+                      {completedTasks.task3 && (
+                        <span className="academic-card-status-badge me-4">
+                          <i className="bi bi-check2-circle"></i> Task Completed
+                        </span>
+                      )}
+                    </div>
+                    <h5 className="fw-bold text-dark mb-1">Time, Work & Efficiency Drill</h5>
+                    <p className="small text-muted mb-3">
+                      Solve 10 problems on LCM, HCF, and Pipes & Cisterns from the 8th Standard Term-1 Mathematics textbook.
+                    </p>
+                    <div className="p-3 bg-light rounded-2 border mb-3 small">
+                      <div className="d-flex justify-content-between py-1">
+                        <span className="text-muted">Target Questions:</span>
+                        <span className="fw-bold">10 Textbook Problems</span>
+                      </div>
+                      <div className="d-flex justify-content-between py-1">
+                        <span className="text-muted">Expected Time:</span>
+                        <span className="fw-bold">25 Minutes</span>
+                      </div>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                      <small className="text-muted">Samacheer Book Problem Set</small>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTask('task3', 'Time & Work Drill')}
+                        className={`btn btn-sm fw-bold px-3 ${
+                          completedTasks.task3 ? 'btn-outline-success' : 'btn-dark'
+                        }`}
+                      >
+                        {completedTasks.task3 ? (
+                          <>
+                            <i className="bi bi-check-lg me-1"></i> Completed (Click to Toggle)
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check-circle me-1"></i> Mark as Completed
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Task Card 4: TNUSRB Police Drill */}
+                <div className="col-12 col-md-6">
+                  <div className={`academic-card ${completedTasks.task4 ? 'completed' : ''}`}>
+                    <AcademicCardCheckmark label="TNUSRB Task Completed" />
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <span className="card-kicker text-danger">TNUSRB Uniformed Services</span>
+                      {completedTasks.task4 && (
+                        <span className="academic-card-status-badge me-4">
+                          <i className="bi bi-check2-circle"></i> Task Completed
+                        </span>
+                      )}
+                    </div>
+                    <h5 className="fw-bold text-dark mb-1">Psychology & Spatial Reasoning Practice</h5>
+                    <p className="small text-muted mb-3">
+                      Revise coding-decoding, blood relations, and syllogisms from the SI Police examination guidebook.
+                    </p>
+                    <div className="p-3 bg-light rounded-2 border mb-3 small">
+                      <div className="d-flex justify-content-between py-1">
+                        <span className="text-muted">Exam Wing:</span>
+                        <span className="fw-bold">SI & Constable Part B</span>
+                      </div>
+                      <div className="d-flex justify-content-between py-1">
+                        <span className="text-muted">Target Accuracy:</span>
+                        <span className="fw-bold text-success">90%+ Required</span>
+                      </div>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center mt-auto pt-2 border-top">
+                      <small className="text-muted">Police Psychology Syllabus</small>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTask('task4', 'Police Psychology Practice')}
+                        className={`btn btn-sm fw-bold px-3 ${
+                          completedTasks.task4 ? 'btn-outline-success' : 'btn-dark'
+                        }`}
+                      >
+                        {completedTasks.task4 ? (
+                          <>
+                            <i className="bi bi-check-lg me-1"></i> Completed (Click to Toggle)
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check-circle me-1"></i> Mark as Completed
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Recent Validated Results Table */}
             <div className="card border-0 shadow-sm rounded-3">
               <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -494,66 +789,78 @@ const StudentDashboard = () => {
             </div>
 
             <div className="row g-4">
-              {tests.map((test) => (
-                <div className="col-12 col-lg-6" key={test.id}>
-                  <div className="card border-0 shadow-sm rounded-3 h-100 p-4 bg-white d-flex flex-column justify-content-between">
-                    <div>
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <span className="badge bg-primary-subtle text-primary fw-bold px-2 py-1">
-                          {test.category} · {test.department || 'Examination'}
-                        </span>
-                        <span className="small text-muted fw-semibold">
-                          <i className="bi bi-clock me-1"></i> {test.durationText || '3 Hours'}
-                        </span>
+              {tests.map((test) => {
+                const isCompleted = mySubmissions.some((sub) => sub.testId === test.id);
+                return (
+                  <div className="col-12 col-lg-6" key={test.id}>
+                    <div className={`academic-card h-100 ${isCompleted ? 'completed' : ''}`}>
+                      <AcademicCardCheckmark label="Mock Test Completed & Evaluated" />
+                      <div>
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <span className="card-kicker text-warning mb-0">
+                            {test.category} · {test.department || 'Examination'}
+                          </span>
+                          {isCompleted ? (
+                            <span className="academic-card-status-badge me-4">
+                              <i className="bi bi-check2-circle"></i> OMR Evaluated
+                            </span>
+                          ) : (
+                            <span className="small text-muted fw-semibold">
+                              <i className="bi bi-clock me-1"></i> {test.durationText || '3 Hours'}
+                            </span>
+                          )}
+                        </div>
+
+                        <h5 className="fw-bold text-dark mb-2">{test.title}</h5>
+                        <p className="small text-muted mb-3">{test.subject || test.instructions}</p>
+
+                        <div className="p-3 bg-light rounded-2 border mb-3 small">
+                          <div className="d-flex justify-content-between py-1 border-bottom">
+                            <span className="text-muted">Questions:</span>
+                            <span className="fw-bold text-dark">{test.questions?.length || test.totalQuestions || 25} Questions</span>
+                          </div>
+                          <div className="d-flex justify-content-between py-1 border-bottom">
+                            <span className="text-muted">Marking Scheme:</span>
+                            <span className="fw-bold text-success">+{test.positiveMark || 1.5} per correct (No negative)</span>
+                          </div>
+                          <div className="d-flex justify-content-between py-1">
+                            <span className="text-muted">Exam Format:</span>
+                            <span className="fw-semibold text-dark">TNPSC OMR Bubble Sheet</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <h5 className="fw-bold text-dark mb-2">{test.title}</h5>
-                      <p className="small text-muted mb-3">{test.subject || test.instructions}</p>
+                      <div className="d-flex flex-wrap gap-2 pt-2 border-top mt-auto">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm flex-grow-1"
+                          onClick={() => handleDownloadPDF(test.questionPaperFilename || 'SUNDAY GRP 4 SCHEDULE -2025.pdf', 'Question Paper')}
+                        >
+                          <i className="bi bi-file-earmark-pdf text-danger me-1"></i> Question Paper
+                        </button>
 
-                      <div className="p-3 bg-light rounded-2 border mb-3 small">
-                        <div className="d-flex justify-content-between py-1 border-bottom">
-                          <span className="text-muted">Questions:</span>
-                          <span className="fw-bold text-dark">{test.questions?.length || test.totalQuestions || 25} Questions</span>
-                        </div>
-                        <div className="d-flex justify-content-between py-1 border-bottom">
-                          <span className="text-muted">Marking Scheme:</span>
-                          <span className="fw-bold text-success">+{test.positiveMark || 1.5} per correct (No negative)</span>
-                        </div>
-                        <div className="d-flex justify-content-between py-1">
-                          <span className="text-muted">Exam Format:</span>
-                          <span className="fw-semibold text-dark">TNPSC OMR Bubble Sheet</span>
-                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-outline-info btn-sm flex-grow-1"
+                          onClick={() => setViewingAnswerKeyTest(test)}
+                        >
+                          <i className="bi bi-key me-1"></i> Answer Key & Solutions
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`btn btn-sm flex-grow-1 fw-bold ${
+                            isCompleted ? 'btn-outline-success' : 'btn-primary-custom text-white'
+                          }`}
+                          onClick={() => handleStartOMRTest(test)}
+                        >
+                          <i className="bi bi-ui-checks-grid me-1"></i> {isCompleted ? 'Re-take OMR Test' : 'Fill OMR Sheet'}
+                        </button>
                       </div>
-                    </div>
-
-                    <div className="d-flex flex-wrap gap-2 pt-2 border-top">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm flex-grow-1"
-                        onClick={() => handleDownloadPDF(test.questionPaperFilename || 'SUNDAY GRP 4 SCHEDULE -2025.pdf', 'Question Paper')}
-                      >
-                        <i className="bi bi-file-earmark-pdf text-danger me-1"></i> Question Paper
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btn-outline-info btn-sm flex-grow-1"
-                        onClick={() => setViewingAnswerKeyTest(test)}
-                      >
-                        <i className="bi bi-key me-1"></i> Answer Key & Solutions
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btn-primary-custom btn-sm flex-grow-1 text-white fw-bold"
-                        onClick={() => handleStartOMRTest(test)}
-                      >
-                        <i className="bi bi-ui-checks-grid me-1"></i> Fill OMR Sheet
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

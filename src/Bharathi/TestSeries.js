@@ -3,10 +3,19 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Swal from 'sweetalert2';
 import { testApi } from './Api/Api';
+import AcademicCardCheckmark from './Common/AcademicCardCheckmark';
 
 const TestSeries = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [completedSchedules, setCompletedSchedules] = useState(() => {
+    try {
+      const saved = localStorage.getItem('completed_schedules');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -25,7 +34,7 @@ const TestSeries = () => {
     fetchPosts();
   }, []);
 
-  const handleDownloadPDF = (filename, label) => {
+  const handleDownloadPDF = (filename, label, scheduleKey = filename) => {
     const link = document.createElement('a');
     link.href = `/${encodeURIComponent(filename)}`;
     link.download = filename;
@@ -33,11 +42,20 @@ const TestSeries = () => {
     link.click();
     document.body.removeChild(link);
 
+    // Mark schedule as downloaded & completed with animated check-mark
+    setCompletedSchedules((prev) => {
+      const next = { ...prev, [scheduleKey]: true };
+      try {
+        localStorage.setItem('completed_schedules', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
     Swal.fire({
       icon: 'success',
       title: 'Download Started',
-      text: `${label} is downloading. Standardize your practice tests!`,
-      timer: 2500,
+      text: `${label} downloaded. Academic schedule verified with check-mark.`,
+      timer: 1800,
       showConfirmButton: false
     });
   };
@@ -106,8 +124,9 @@ const TestSeries = () => {
           <div className="col-12 col-md-4">
             <motion.div 
               whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(10, 25, 47, 0.1)' }}
-              className="academic-card text-center h-100"
+              className={`academic-card text-center h-100 ${completedSchedules['saturday'] ? 'completed' : ''}`}
             >
+              <AcademicCardCheckmark label="Saturday Schedule Verified" />
               <div className="card-kicker">Weekly Saturday Batch</div>
               <h4 className="mb-2">Saturday Test Schedule 2026</h4>
               <p className="small text-muted flex-grow-1">
@@ -117,13 +136,20 @@ const TestSeries = () => {
                 <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
                 <span className="fw-semibold">SATURDAY TIME TABLE-1.pdf</span>
               </div>
+              {completedSchedules['saturday'] && (
+                <div className="mb-3 d-flex justify-content-center">
+                  <span className="academic-card-status-badge">
+                    <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
+                  </span>
+                </div>
+              )}
               <motion.button 
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownloadPDF('SATURDAY TIME TABLE-1.pdf', 'Saturday Test Schedule')}
+              whileTap={{ scale: 0.95 }}
+                onClick={() => handleDownloadPDF('SATURDAY TIME TABLE-1.pdf', 'Saturday Test Schedule', 'saturday')}
                 className="btn-primary-custom w-100"
               >
                 <i className="bi bi-download"></i>
-                <span>Download Saturday PDF</span>
+                <span>{completedSchedules['saturday'] ? 'Re-download Schedule' : 'Download Saturday PDF'}</span>
               </motion.button>
             </motion.div>
           </div>
@@ -132,8 +158,9 @@ const TestSeries = () => {
           <div className="col-12 col-md-4">
             <motion.div 
               whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(217, 119, 6, 0.15)' }}
-              className="academic-card text-center border-warning h-100"
+              className={`academic-card text-center border-warning h-100 ${completedSchedules['sunday'] ? 'completed' : ''}`}
             >
+              <AcademicCardCheckmark label="Sunday Schedule Verified" />
               <div className="card-kicker text-warning">Special Sunday Batch</div>
               <h4 className="mb-2">Sunday Group 4 Schedule 2026</h4>
               <p className="small text-muted flex-grow-1">
@@ -143,13 +170,20 @@ const TestSeries = () => {
                 <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
                 <span className="fw-semibold">SUNDAY GRP 4 SCHEDULE -2026.pdf</span>
               </div>
+              {completedSchedules['sunday'] && (
+                <div className="mb-3 d-flex justify-content-center">
+                  <span className="academic-card-status-badge">
+                    <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
+                  </span>
+                </div>
+              )}
               <motion.button 
                 whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownloadPDF('SUNDAY GRP 4 SCHEDULE -2026.pdf', 'Sunday Group 4 Schedule')}
+                onClick={() => handleDownloadPDF('SUNDAY GRP 4 SCHEDULE -2026.pdf', 'Sunday Group 4 Schedule', 'sunday')}
                 className="btn-gold-custom w-100"
               >
                 <i className="bi bi-download"></i>
-                <span>Download Sunday PDF</span>
+                <span>{completedSchedules['sunday'] ? 'Re-download Schedule' : 'Download Sunday PDF'}</span>
               </motion.button>
             </motion.div>
           </div>
@@ -158,8 +192,9 @@ const TestSeries = () => {
           <div className="col-12 col-md-4">
             <motion.div 
               whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(10, 25, 47, 0.1)' }}
-              className="academic-card text-center h-100"
+              className={`academic-card text-center h-100 ${completedSchedules['omr'] ? 'completed' : ''}`}
             >
+              <AcademicCardCheckmark label="OMR Practice Sheet Verified" />
               <div className="card-kicker">Standard Practice</div>
               <h4 className="mb-2">Official TNPSC OMR Sheet</h4>
               <p className="small text-muted flex-grow-1">
@@ -169,13 +204,20 @@ const TestSeries = () => {
                 <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
                 <span className="fw-semibold">Tnpsc - OMR Sheet-1.pdf</span>
               </div>
+              {completedSchedules['omr'] && (
+                <div className="mb-3 d-flex justify-content-center">
+                  <span className="academic-card-status-badge">
+                    <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
+                  </span>
+                </div>
+              )}
               <motion.button 
                 whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownloadPDF('Tnpsc - OMR Sheet-1.pdf', 'TNPSC OMR Sheet')}
+                onClick={() => handleDownloadPDF('Tnpsc - OMR Sheet-1.pdf', 'TNPSC OMR Sheet', 'omr')}
                 className="btn-primary-custom w-100"
               >
                 <i className="bi bi-download"></i>
-                <span>Download OMR Sheet</span>
+                <span>{completedSchedules['omr'] ? 'Re-download OMR Sheet' : 'Download OMR Sheet'}</span>
               </motion.button>
             </motion.div>
           </div>

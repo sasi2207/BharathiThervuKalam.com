@@ -208,6 +208,22 @@ api.interceptors.response.use(
     const url = error.config?.url || "";
     const method = error.config?.method?.toLowerCase();
 
+    if (error.response?.status === 401 && !url.includes('/api/auth/login')) {
+      console.warn('[Security Guard] 401 Unauthorized detected. Purging token and redirecting.');
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('user_role');
+      } catch (e) {}
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        if (!['/login', '/Student-Login', '/Admin-Login', '/Staff-Login'].includes(currentPath)) {
+          window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}&reason=session_expired`;
+        }
+      }
+    }
+
     if (method === "get") {
       if (url.includes("/api/faculty") || url.includes("staff_view.php") || url.includes("group1_all.php")) {
         console.warn(`[Python API] Returning fallback faculty data for ${url}`);
