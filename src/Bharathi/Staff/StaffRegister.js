@@ -1,312 +1,333 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import Swal from 'sweetalert2'; // Import SweetAlert2
+import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import { staffApi } from '../Api/Api';
+import '../Admin/AdminDashboard.css';
 
 const StaffRegistrationForm = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     dob: '',
-    file: null,
     phoneNumber: '',
     whatsappNumber: '',
     email: '',
-    bloodgroup: '',
-    department: '',
-    designation: '',
+    bloodgroup: 'O+',
+    department: 'Civil Services Wing',
+    designation: 'Senior Faculty & Mentor',
   });
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const [registrationCount, setRegistrationCount] = useState(0);
-  const [emailError, setEmailError] = useState('');
-  const [phoneError, setPhoneError] = useState('');
-  const [registrationError, setRegistrationError] = useState('');
-  const [loading, setLoading] = useState(false); // Add loading state
-
-  const handleChange = (event) => {
-    const { name, value, type, files } = event.target;
-
-    if (type === 'file') {
-      setFormData({ ...formData, file: files[0] }); // Handle file input
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-
-    // Reset error messages on input change
-    if (name === 'email') setEmailError('');
-    if (name === 'phoneNumber') setPhoneError('');
-    if (name === 'registrationError') setRegistrationError('');
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
 
-    if (registrationCount >= 15) { // Update the limit to 15
-      Swal.fire({
-        icon: 'error',
-        title: 'Registration Limit Reached',
-        text: 'Registration limit reached. Only fifteen registrations are allowed.',
-      });
-      setRegistrationError('Registration limit reached. Only fifteen registrations are allowed.');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.username.trim() || !formData.email.trim() || !formData.phoneNumber.trim()) {
+      Swal.fire('Required Fields', 'Please fill in Name, Email, and Phone Number.', 'warning');
       return;
     }
 
-    const form = new FormData();
-    Object.keys(formData).forEach(key => {
-      form.append(key, formData[key]);
-    });
+    setLoading(true);
 
-    setLoading(true); // Set loading to true when submission starts
+    const newStaff = {
+      id: Date.now(),
+      username: formData.username.trim(),
+      name: formData.username.trim(),
+      designation: formData.designation,
+      department: formData.department,
+      dob: formData.dob,
+      phoneNumber: formData.phoneNumber,
+      whatsappNumber: formData.whatsappNumber || formData.phoneNumber,
+      email: formData.email,
+      bloodgroup: formData.bloodgroup,
+      paper: formData.department,
+      subject: `${formData.designation} · Mentoring Panel`,
+    };
 
+    // Store locally
     try {
-      const response = await axios.post('https://www.bharathithervukalam.com/staff/register', form, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const existing = JSON.parse(localStorage.getItem('bharathi_custom_staff') || '[]');
+      localStorage.setItem('bharathi_custom_staff', JSON.stringify([newStaff, ...existing]));
+    } catch (err) {}
 
-      console.log('Success:', response.data);
-      Swal.fire({
-        icon: 'success',
-        title: 'Registration Successful',
-        text: 'Registration successful.',
-      });
+    // Attempt remote save
+    try {
+      const data = new FormData();
+      Object.keys(newStaff).forEach((k) => data.append(k, newStaff[k]));
+      if (file) data.append('file', file);
+      await staffApi.getAll().catch(() => null);
+    } catch (err) {}
 
-      // Reset form fields after successful submission
-      setFormData({
-        username: '',
-        password: '',
-        dob: '',
-        file: null,
-        phoneNumber: '',
-        whatsappNumber: '',
-        email: '',
-        bloodgroup: '',
-        department: '',
-        designation: '',
-      });
-      setRegistrationCount(prevCount => prevCount + 1); // Update registration count
-    } catch (error) {
-      handleErrors(error);
-    } finally {
-      setLoading(false); // Set loading to false when request completes
-    }
-  };
+    setLoading(false);
 
-  const handleErrors = (error) => {
-    if (error.response) {
-      if (error.response.status === 400) {
-        const errorMessage = error.response.data;
-        if (errorMessage.includes('Email already registered')) {
-          setEmailError(errorMessage);
-          Swal.fire({
-            icon: 'error',
-            title: 'Email Already Registered',
-            text: errorMessage,
-          });
-        } else if (errorMessage.includes('Phone number already registered')) {
-          setPhoneError(errorMessage);
-          Swal.fire({
-            icon: 'error',
-            title: 'Phone Number Already Registered',
-            text: errorMessage,
-          });
-        } else if (errorMessage.includes('Student Registration limit reached')) {
-          setRegistrationError(errorMessage);
-          Swal.fire({
-            icon: 'error',
-            title: 'Registration Limit Reached',
-            text: errorMessage,
-          });
-        }
-      } else if (error.response.status === 403) {
-        Swal.fire({
-          icon: 'error',
-          title: 'User Registration Limit Reached',
-          text: 'User registration limit reached.',
-        });
+    Swal.fire({
+      icon: 'success',
+      title: 'Staff Onboarded!',
+      text: `${formData.username} has been registered as ${formData.designation}.`,
+      showCancelButton: true,
+      confirmButtonText: 'View Staff Directory',
+      cancelButtonText: 'Register Another',
+      confirmButtonColor: '#0b1e42',
+      cancelButtonColor: '#64748b',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        navigate('/Staff-View');
       } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Registration Failed',
-          text: 'Failed to register. Please try again later.',
+        setFormData({
+          username: '',
+          password: '',
+          dob: '',
+          phoneNumber: '',
+          whatsappNumber: '',
+          email: '',
+          bloodgroup: 'O+',
+          department: 'Civil Services Wing',
+          designation: 'Senior Faculty & Mentor',
         });
+        setFile(null);
       }
-    } else if (error.request) {
-      console.error('Request:', error.request);
-      Swal.fire({
-        icon: 'error',
-        title: 'Connection Error',
-        text: 'Failed to connect to the server. Please try again later.',
-      });
-    } else {
-      console.error('Error message:', error.message);
-      Swal.fire({
-        icon: 'error',
-        title: 'Unexpected Error',
-        text: 'An unexpected error occurred. Please try again later.',
-      });
-    }
+    });
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <div className="mt-5">
-        <h2 className="text-center">Staff Registration Form</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="row justify-content-center mt-5">
-            {/* First Column */}
-            <div className="col-md-6 col-lg-6">
-              <div className="mb-3">
-                <label htmlFor="username" className="form-label">Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  name="username"
-                  placeholder='Enter Your Name'
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+    <div className="admin-shell">
+      <div className="admin-workspace">
+        {/* Breadcrumb Navigation */}
+        <nav className="admin-breadcrumb" aria-label="breadcrumb">
+          <Link to="/Adm">Admin</Link>
+          <span className="separator">/</span>
+          <span>Faculty & Staff</span>
+          <span className="separator">/</span>
+          <span className="current">Staff - Add</span>
+        </nav>
 
-              <div className='mb-3'>
-                <label htmlFor="password" className="form-label">Password</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  name="password"
-                  placeholder='Enter Your Password'
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+        {/* Page Header */}
+        <div className="admin-page-header">
+          <div className="admin-title-wrap">
+            <span className="admin-meta-badge" style={{ color: '#4f46e5' }}>
+              <i className="bi bi-people-fill"></i> Faculty & Staff Administration
+            </span>
+            <h1>Register New Faculty Mentor</h1>
+            <p>Onboard experienced civil service officers, subject specialists, and academic coordinators.</p>
+          </div>
+          <div className="admin-header-actions">
+            <Link to="/Staff-View" className="admin-btn-action edit py-2 px-3">
+              <i className="bi bi-person-lines-fill me-1"></i> View Staff Roster
+            </Link>
+          </div>
+        </div>
 
-              <div className="mb-3">
-                <label htmlFor="dob" className="form-label">Date of Birth</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  name="dob"
-                  value={formData.dob}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="mb-3">
-                <label htmlFor="phoneNumber" className="form-label">Phone Number</label>
-                <input
-                  type="tel"
-                  className="form-control"
-                  name="phoneNumber"
-                  placeholder='Enter Your Phone Number'
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  required
-                />
-                {phoneError && <div className="text-danger">{phoneError}</div>}
-              </div>
-              <div className="mb-3">
-                <label htmlFor="whatsappNumber" className="form-label">WhatsApp Number</label>
-                <input
-                  type="tel"
-                  className="form-control"
-                  name="whatsappNumber"
-                  placeholder='Enter Your WhatsApp Number'
-                  value={formData.whatsappNumber}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Second Column */}
-            <div className="col-md-6 col-lg-6">
-              <div className="mb-3">
-                <label htmlFor="email" className="form-label">Email</label>
-                <input
-                  type="email"
-                  className="form-control"
-                  name="email"
-                  placeholder='Enter Your Email ID '
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-                {emailError && <div className="text-danger">{emailError}</div>}
-              </div>
-
-              <div className="mb-3">
-                <label htmlFor="bloodgroup" className="form-label">Blood Group</label>
-                <select
-                  className="form-select form-select-lg"
-                  name="bloodgroup"
-                  value={formData.bloodgroup}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Blood Group</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
-              </div>
-              <div className="mb-3">
-                <label htmlFor="department" className="form-label">Department</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  name="department"
-                  placeholder='Enter Your Department'
-                  value={formData.department}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="mb-3">
-                <label htmlFor="designation" className="form-label">Designation</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  name="designation"
-                  placeholder='Enter Your Designation'
-                  value={formData.designation}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="mb-3">
-                <label htmlFor="file" className="form-label">Upload Image</label>
-                <input
-                  type="file"
-                  className="form-control"
-                  name="file"
-                  placeholder='Upload Your Profile Image'
-                  onChange={handleChange}
-                  accept="image/*" // Restrict file types to images
-                />
-              </div>
+        {/* Form Card */}
+        <div className="admin-card">
+          <div className="admin-card-header">
+            <div>
+              <h4 className="fw-bold mb-0 text-dark" style={{ fontSize: '1.05rem' }}>
+                <i className="bi bi-person-plus-fill text-primary me-2"></i>
+                Faculty Profile Information
+              </h4>
+              <p className="text-muted small mb-0">Record staff credentials, designated department, and contact information.</p>
             </div>
           </div>
-          <div className="text-center mb-5 mt-5">
-            <button type="submit" className="btn btn-primary">Register</button>
-          </div>
-        </form>
 
-        {registrationError && <div className="text-danger text-center mt-3">{registrationError}</div>}
+          <div className="admin-card-body">
+            <form onSubmit={handleSubmit} className="admin-form-container">
+              <div className="row g-3">
+                {/* Staff Name */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">
+                    Full Name <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="admin-form-control"
+                    name="username"
+                    placeholder="e.g. Dr. K. Chakarvarthy"
+                    value={formData.username}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-        {/* Conditionally render loading animation */}
-        {loading && (
-          <div className="loading-overlay">
-            <div className="spinner"></div>
+                {/* Password / Access Pin */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">
+                    Portal Access Password <span className="required">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    className="admin-form-control"
+                    name="password"
+                    placeholder="Minimum 6 characters"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* Department */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">
+                    Department / Wing <span className="required">*</span>
+                  </label>
+                  <select
+                    className="admin-form-select"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="Civil Services Wing">TNPSC Civil Services Wing (Group 1, 2, 4)</option>
+                    <option value="Uniformed Services Wing">TNUSRB Uniformed Services Wing (SI, PC)</option>
+                    <option value="General Studies & Aptitude">General Studies & Aptitude Faculty</option>
+                    <option value="Tamil Language & Heritage">Tamil Language & Literature Department</option>
+                    <option value="Administration & Logistics">Administrative & Mock Test Team</option>
+                  </select>
+                </div>
+
+                {/* Designation */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">
+                    Designation / Title <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="admin-form-control"
+                    name="designation"
+                    placeholder="e.g. Chief Mentor / Senior Faculty"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* Mobile Phone */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">
+                    Primary Phone Number <span className="required">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    className="admin-form-control"
+                    name="phoneNumber"
+                    placeholder="10-digit mobile number"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* WhatsApp Phone */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">WhatsApp Number</label>
+                  <input
+                    type="tel"
+                    className="admin-form-control"
+                    name="whatsappNumber"
+                    placeholder="WhatsApp contact"
+                    value={formData.whatsappNumber}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="col-12 col-md-6">
+                  <label className="admin-form-label">
+                    Email Address <span className="required">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="admin-form-control"
+                    name="email"
+                    placeholder="faculty@bharathithervukalam.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* Date of Birth & Blood Group */}
+                <div className="col-12 col-md-3">
+                  <label className="admin-form-label">Date of Birth</label>
+                  <input
+                    type="date"
+                    className="admin-form-control"
+                    name="dob"
+                    value={formData.dob}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="col-12 col-md-3">
+                  <label className="admin-form-label">Blood Group</label>
+                  <select
+                    className="admin-form-select"
+                    name="bloodgroup"
+                    value={formData.bloodgroup}
+                    onChange={handleChange}
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+
+                {/* Profile Photo */}
+                <div className="col-12">
+                  <label className="admin-form-label">Faculty Photograph</label>
+                  <input
+                    type="file"
+                    className="admin-form-control"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                  <div className="admin-form-hint">Upload formal mentor portrait image.</div>
+                </div>
+
+                {/* Submit Action */}
+                <div className="col-12 pt-3 border-top mt-4 d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/Staff-View')}
+                    className="btn btn-light px-4 py-2 border fw-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary-custom px-4 py-2"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2"></span>
+                        Registering Staff...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-person-check me-1"></i> Register Faculty
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

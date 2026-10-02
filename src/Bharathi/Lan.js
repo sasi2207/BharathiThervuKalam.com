@@ -39,6 +39,8 @@ import UserDetails from './Student/StudentDetails';
 
 // Admin & Staff Management
 import AdminNav from './Admin/add/AdminNav';
+import AdminBottomNav from './Admin/add/AdminBottomNav';
+import AdminFooter from './Admin/add/AdminFooter';
 import Main from './Admin/add/Main';
 import StaffDash from './Admin/add/StaffDash';
 import StaffView from './Staff/StaffView';
@@ -49,6 +51,9 @@ import AchieversForm from './Insert/GET/Achivers';
 import AchiversView from './Insert/POST/AchiversView';
 import TestForm from './Insert/GET/Test';
 import TestView from './Insert/POST/TestView';
+import AdminOMRMaster from './Admin/OMR/AdminOMRMaster';
+import StudentDashboard from './Student/StudentDashboard';
+import StudentPortal from './Student/StudentPortal';
 import GroupI from './Insert/GET/Group1';
 import GroupIView from './Insert/POST/GroupIView';
 import GroupII from './Insert/GET/Group2';
@@ -93,7 +98,8 @@ const AdminLayout = ({ children }) => (
     >
       {children}
     </motion.main>
-    <Footer />
+    <AdminFooter />
+    <AdminBottomNav />
   </div>
 );
 
@@ -108,7 +114,8 @@ const StaffDashLayout = ({ children }) => (
     >
       {children}
     </motion.main>
-    <Footer />
+    <AdminFooter />
+    <AdminBottomNav />
   </div>
 );
 
@@ -144,6 +151,8 @@ function GoogleTranslate() {
           <Route path="/Payment" element={<RazorpayPayment />} />
 
           {/* User Authentication & Portals */}
+          <Route path="/student-portal" element={<PublicLayout><StudentPortal /></PublicLayout>} />
+          <Route path="/student-dashboard" element={<PublicLayout><StudentDashboard /></PublicLayout>} />
           <Route path="/Student-Register" element={<PublicLayout><StudentRegisterForm /></PublicLayout>} />
           <Route path="/Student-Login" element={<PublicLayout><StudentLoginForm /></PublicLayout>} />
           <Route path="/Staff-Register" element={<PublicLayout><StaffRegisterForm /></PublicLayout>} />
@@ -166,6 +175,8 @@ function GoogleTranslate() {
           <Route path="/Achivers-View" element={<AdminLayout><AchiversView /></AdminLayout>} />
           <Route path="/Test-Add" element={<AdminLayout><TestForm /></AdminLayout>} />
           <Route path="/Test-View" element={<AdminLayout><TestView /></AdminLayout>} />
+          <Route path="/OMR-Master" element={<AdminLayout><AdminOMRMaster /></AdminLayout>} />
+          <Route path="/admin/omr-keys" element={<AdminLayout><AdminOMRMaster /></AdminLayout>} />
 
           {/* TNPSC Admin */}
           <Route path="/Group-I-Add" element={<AdminLayout><GroupI /></AdminLayout>} />

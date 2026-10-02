@@ -251,6 +251,15 @@ export default function Header() {
                 Test Series
               </Link>
 
+              {/* Student Portal & OMR */}
+              <Link 
+                to="/student-dashboard" 
+                onClick={closeAllMenus} 
+                className={`nav-link-custom ${isActive('/student-dashboard') ? 'active' : ''}`}
+              >
+                Student Portal
+              </Link>
+
               {/* Results & Achievers */}
               <Link 
                 to="/Achivement" 
@@ -330,8 +339,11 @@ export default function Header() {
                       className="dropdown-menu-custom bg-white shadow-xl p-2 border rounded-3 position-absolute end-0"
                       style={{ top: '100%', minWidth: '190px', zIndex: 999999, backgroundColor: '#ffffff' }}
                     >
+                      <Link to="/student-dashboard" onClick={closeAllMenus} className="dropdown-item-custom">
+                        <i className="bi bi-mortarboard me-2 text-warning"></i>Student Dashboard & OMR
+                      </Link>
                       <Link to="/Student-Login" onClick={closeAllMenus} className="dropdown-item-custom">
-                        <i className="bi bi-mortarboard me-2 text-warning"></i>Student Portal
+                        <i className="bi bi-box-arrow-in-right me-2 text-secondary"></i>Student Login
                       </Link>
                       <Link to="/Staff-Login" onClick={closeAllMenus} className="dropdown-item-custom">
                         <i className="bi bi-person-badge me-2 text-info"></i>Staff Portal
@@ -512,6 +524,10 @@ export default function Header() {
                     </div>
                   )}
                 </div>
+
+                <Link to="/student-dashboard" onClick={closeAllMenus} className="nav-link-custom p-2 text-warning fw-bold">
+                  <i className="bi bi-mortarboard-fill me-2 text-warning"></i>Student Dashboard & OMR
+                </Link>
 
                 <Link to="/Test-Series" onClick={closeAllMenus} className="nav-link-custom p-2">
                   <i className="bi bi-calendar3 me-2 text-warning"></i>2026 Test Schedules (PDF)

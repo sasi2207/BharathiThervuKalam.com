@@ -122,8 +122,9 @@ nav .navbar .links li:hover .student-register-sub-menu {
 .navbar .links li .sub-menu a:hover,
 .navbar .links li .new-sub-menu a:hover {
   color: #0bcefe;
-  font-size: 19px;
-  font-weight: 900;
+  font-weight: 600;
+  padding-left: 4px;
+  transition: all 0.15s ease;
 }
 
 .navbar .links li .sub-menu .more-arrow,

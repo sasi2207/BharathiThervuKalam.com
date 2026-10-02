@@ -30,7 +30,7 @@ const StudentLoginForm = () => {
         showConfirmButton: false
       });
       setTimeout(() => {
-        navigate('/Test-Series');
+        navigate('/student-dashboard');
       }, 1500);
     } catch (error) {
       // Demo / offline fallback for testing purposes
@@ -43,7 +43,7 @@ const StudentLoginForm = () => {
           timer: 1500,
           showConfirmButton: false
         });
-        setTimeout(() => navigate('/Test-Series'), 1200);
+        setTimeout(() => navigate('/student-dashboard'), 1200);
       } else {
         Swal.fire({
           icon: 'error',

@@ -64,6 +64,12 @@ const TestSeries = () => {
             </p>
 
             <div className="d-flex flex-wrap align-items-center gap-3">
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                <Link to="/student-dashboard" className="btn btn-warning text-dark fw-bold px-3 py-2 shadow">
+                  <i className="bi bi-ui-checks-grid me-1"></i>
+                  <span>Practice Digital OMR Sheet</span>
+                </Link>
+              </motion.div>
               <motion.button 
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
@@ -71,7 +77,7 @@ const TestSeries = () => {
                 className="btn-gold-custom"
               >
                 <i className="bi bi-file-earmark-pdf"></i>
-                <span>Download Official OMR Sheet</span>
+                <span>Download OMR PDF</span>
               </motion.button>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                 <Link to="/Student-Register" className="btn-outline-custom text-white border-light">
