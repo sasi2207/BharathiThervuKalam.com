@@ -1,0 +1,39 @@
+.staff-login-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fbe1e1;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    .staff-login-container {
+      padding: 15px;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .staff-login-container {
+      padding: 10px;
+    }
+  }
+
+
+
+  .forgot-password-link {
+    font-size: 0.9rem;
+    color: #6a11cb;
+    text-decoration: none;
+  }
+  
+  .forgot-password-link:hover {
+    color: #5a0fb0;
+    text-decoration: underline;
+  }
+  
+  
+  .text-center {
+    text-align: center;
+  }
+  

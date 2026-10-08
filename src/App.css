@@ -1,0 +1,5 @@
+/* App-level overrides and utilities */
+.my-app {
+  background-color: var(--canvas-bg);
+  min-height: 100vh;
+}

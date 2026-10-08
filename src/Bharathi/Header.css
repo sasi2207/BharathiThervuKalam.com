@@ -1,0 +1,58 @@
+.head {
+    background:lightcyan;
+    /* padding: 10px 0; */
+}
+/* Header.css */
+
+
+
+.Logo-1 {
+    max-width: 250px; /* Adjust width as needed */
+    height: auto; /* Maintain aspect ratio */
+    background: transparent;
+}
+
+.contact-info span {
+    margin: 5px; /* Optional: Add margin between contact info items */
+}
+
+
+
+
+.custom-tooltip {
+    /* --bs-tooltip-bg: var(--bs-warning); */
+    --bs-tooltip-bg:rgb(20, 2, 42);
+   
+  }
+
+
+
+
+
+.contact-info .hnum {
+    text-decoration: none;
+    color: #000; /* Default text color */
+}
+
+.contact-info .hnum:hover {
+    text-decoration: underline;
+    
+   
+}
+
+.bi {
+    font-size: 1.2em; /* Adjust icon size */
+}
+
+
+
+@media (max-width: 768px) {
+    .contact-info {
+        justify-content: space-around; /* Better spacing on mobile */
+    }
+    .ps-2 {
+        padding-left: 0.5rem !important; /* Adjust padding on mobile */
+    }
+}
+
+

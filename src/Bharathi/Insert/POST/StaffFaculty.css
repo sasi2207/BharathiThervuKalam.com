@@ -1,0 +1,69 @@
+.passport-photo {
+    width: 200px; /* Set fixed width */
+    height: 200px; /* Set fixed height */
+    object-fit: cover; /* Ensure the image fits the dimensions */
+    border-radius: 50%; /* Make the image round */
+    border: 2px solid #ddd; /* Border color and width */
+    margin: 0 auto; /* Center the image */
+  }
+  
+  .custom-card {
+    border: 1px solid #ddd; /* Border color and width for the card */
+    border-radius: 10px; /* Rounded corners for the card */
+    background-color: #f8f9fa; /* Background color for the card */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow effect */
+  }
+  
+  .custom-card .card-body {
+    padding: 1.25rem; /* Card body padding */
+  }
+  
+  .custom-card .card-title {
+    font-size: 1.25rem; /* Title font size */
+  }
+  
+  .custom-card .card-text {
+    font-size: 1rem; /* Text font size */
+  }
+  
+
+  .custom-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #fdfafc; /* Light card background */
+    border: none; /* Remove border for cleaner look */
+    border-radius: 10px; /* Rounded corners */
+    overflow: hidden;
+  }
+  
+  .custom-card:hover {
+    transform: scale(1.05); /* Slight zoom on hover */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); /* Add shadow effect on hover */
+    background-color: #ffffff; /* Slightly brighter on hover */
+  }
+  
+  .card-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #343a40; /* Dark color for the title */
+  }
+  
+  .card-text {
+    color: #6c757d; /* Soft color for the text */
+  }
+  
+ 
+  #card-sub {
+    color: #f70c0c; /* Bootstrap's info color */
+    font-weight: 500;
+  }
+  
+  .passport-photo {
+    border: 7px solid #fef605; /* Border around the image */
+    transition: border-color 0.3s ease;
+    
+  }
+  
+  .passport-photo:hover {
+    border-color: #28a745; /* Change border color on hover */
+  }
+  
