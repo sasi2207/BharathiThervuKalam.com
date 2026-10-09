@@ -103,6 +103,34 @@ export default function Login() {
               </div>
             )}
 
+            {/* Quick Demo Credential Helper */}
+            <div className="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded-3 border">
+              <span className="small text-muted fw-semibold">Quick Login:</span>
+              <div className="d-flex gap-1">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary py-0 px-2 fs-8"
+                  onClick={() => { setUsername('student'); setPassword('student123'); }}
+                >
+                  Student
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary py-0 px-2 fs-8"
+                  onClick={() => { setUsername('staff'); setPassword('staff123'); }}
+                >
+                  Staff
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-primary py-0 px-2 fs-8 fw-bold"
+                  onClick={() => { setUsername('admin'); setPassword('admin123'); }}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
                 <label className="form-label small fw-semibold text-dark">
@@ -164,11 +192,18 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="text-center pt-2 border-top">
-              <span className="text-muted small">Need an account? </span>
-              <Link to="/Student-Register" className="small fw-bold text-primary text-decoration-none">
-                Register as Candidate
-              </Link>
+            <div className="text-center pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div>
+                <span className="text-muted small">Need an account? </span>
+                <Link to="/Student-Register" className="small fw-bold text-primary text-decoration-none">
+                  Register as Candidate
+                </Link>
+              </div>
+              <div>
+                <Link to="/Admin-Login" className="small fw-bold text-warning text-decoration-none">
+                  <i className="bi bi-shield-lock me-1"></i> Admin Portal
+                </Link>
+              </div>
             </div>
           </div>
         </div>

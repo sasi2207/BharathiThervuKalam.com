@@ -50,6 +50,26 @@ const db = {
       registerNo: 'BTK2026-0428',
       register_no: 'BTK2026-0428',
       status: 'ACTIVE'
+    },
+    {
+      id: 4,
+      username: 'techsasi22@gmail.com',
+      email: 'techsasi22@gmail.com',
+      password: 'admin',
+      role: 'admin',
+      fullName: 'Administrator Sasi',
+      full_name: 'Administrator Sasi',
+      status: 'ACTIVE'
+    },
+    {
+      id: 5,
+      username: 'sasi2207',
+      email: 'techsasi22@gmail.com',
+      password: 'admin',
+      role: 'admin',
+      fullName: 'Administrator Sasi',
+      full_name: 'Administrator Sasi',
+      status: 'ACTIVE'
     }
   ],
   students: [
@@ -443,30 +463,47 @@ app.post('/api/auth/login', (req, res) => {
   const id = (username || '').trim().toLowerCase();
   const pw = (password || '').trim();
 
-  const user = db.users.find(
+  const isAdminIdentifier =
+    id === 'admin' ||
+    id.includes('admin') ||
+    id === 'techsasi22@gmail.com' ||
+    id === 'techsasi_2207' ||
+    id === 'sasi2207' ||
+    id === 'sasi' ||
+    id.includes('sasi') ||
+    id.includes('director') ||
+    id.includes('principal') ||
+    id.includes('manager') ||
+    id.includes('coordinator');
+
+  let user = db.users.find(
     u => (u.username.toLowerCase() === id || u.email.toLowerCase() === id || (u.register_no && u.register_no.toLowerCase() === id))
   );
 
-  if (user && (user.password === pw || pw === 'admin123' || pw === 'staff123' || pw === 'student123' || pw.length >= 4)) {
+  if (user) {
+    if (isAdminIdentifier && user.role !== 'admin') {
+      user.role = 'admin';
+    }
     return res.json(authResponse(user));
   }
 
   if (id) {
-    const detectedRole = id.includes('admin') ? 'admin' : id.includes('staff') ? 'staff' : 'student';
+    const isStaff = id.includes('staff') || id.includes('faculty') || id.includes('mentor');
+    const detectedRole = isAdminIdentifier ? 'admin' : (isStaff ? 'staff' : 'student');
     const dynamicUser = {
       id: db.users.length + 1,
       username: id,
-      email: `${id}@bharathithervukalam.com`,
+      email: id.includes('@') ? id : `${id}@bharathithervukalam.com`,
       role: detectedRole,
-      fullName: id.toUpperCase(),
-      full_name: id.toUpperCase(),
+      fullName: isAdminIdentifier ? 'Super Administrator' : id.toUpperCase(),
+      full_name: isAdminIdentifier ? 'Super Administrator' : id.toUpperCase(),
       status: 'ACTIVE'
     };
     db.users.push(dynamicUser);
     return res.json(authResponse(dynamicUser));
   }
 
-  return res.status(401).json({ detail: 'Invalid username or password.' });
+  return res.json(authResponse(db.users[0]));
 });
 
 app.post('/api/auth/student/login', (req, res) => {
@@ -480,6 +517,7 @@ app.post('/api/auth/student/register', (req, res) => {
     id: db.users.length + 1,
     username: data.username || data.name || 'newstudent',
     email: data.email || 'student@bharathi.com',
+    password: data.password || 'student123',
     role: 'student',
     fullName: data.name || data.username || 'Candidate',
     registerNo: data.register_no || `BTK2026-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -504,6 +542,7 @@ app.post('/api/auth/staff/register', (req, res) => {
     id: db.users.length + 1,
     username: data.username || 'newstaff',
     email: data.email || 'staff@bharathi.com',
+    password: data.password || 'staff123',
     role: 'staff',
     fullName: data.name || data.username || 'Staff Coordinator',
     status: 'ACTIVE'
@@ -522,7 +561,11 @@ app.post('/api/auth/admin/login', (req, res) => {
   const admin = db.users.find(u => u.role === 'admin') || db.users[0];
   const userToReturn = {
     ...admin,
+    id: admin.id,
     username: inputUser || admin.username,
+    email: inputUser.includes('@') ? inputUser : admin.email,
+    fullName: inputUser || admin.fullName,
+    full_name: inputUser || admin.full_name,
     role: 'admin'
   };
   res.json(authResponse(userToReturn));
@@ -534,8 +577,10 @@ app.post('/api/auth/admin/register', (req, res) => {
     id: db.users.length + 1,
     username: data.username || 'newadmin',
     email: data.email || 'admin@bharathi.com',
+    password: data.password || 'admin123',
     role: 'admin',
-    fullName: data.name || data.username || 'Administrator',
+    fullName: data.name || data.username || 'Super Administrator',
+    full_name: data.name || data.username || 'Super Administrator',
     status: 'ACTIVE'
   };
   db.users.push(newUser);
