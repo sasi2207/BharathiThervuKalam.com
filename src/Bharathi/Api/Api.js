@@ -416,4 +416,25 @@ export const omrApi = {
   getSubmissionDetails: (submissionCode) => api.get(`/api/omr/submissions/${submissionCode}`),
 };
 
+// Eligibility Service (/api/eligibility)
+export const eligibilityApi = {
+  getAll: () => api.get("/api/eligibility"),
+  create: (data) => api.post("/api/eligibility", data),
+  update: (id, data) => api.put(`/api/eligibility/${id}`, data),
+  delete: (id) => api.delete(`/api/eligibility/${id}`),
+};
+
+// Institutional Commitments & Pillars Service (/api/about/pillars)
+export const aboutApi = {
+  getPillars: () => api.get("/api/about/pillars"),
+  createPillar: (data) => api.post("/api/about/pillars", data),
+  updatePillar: (id, data) => api.put(`/api/about/pillars/${id}`, data),
+  deletePillar: (id) => api.delete(`/api/about/pillars/${id}`),
+};
+
+// PDF Test Series Question & Highlighted Answer Extractor Service
+export const pdfApi = {
+  extractQuestions: (payload) => api.post("/api/pdf/extract-questions", payload),
+};
+
 export default api;

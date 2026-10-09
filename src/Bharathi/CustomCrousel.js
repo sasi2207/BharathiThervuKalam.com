@@ -1,17 +1,58 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Custom.css';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { coursesApi } from './Api/Api';
+
+const KEY_TO_ROUTE = {
+  group1: '/Group1',
+  group2: '/Group2',
+  group2A: '/Group-2A',
+  group4: '/Group4',
+  siTechnical: '/Si-Recruitment',
+  siFingerprint: '/Si-FingerFrint',
+  commonRecruitment: '/Common',
+  jointRecruitment: '/JointRecritment',
+};
 
 export default function CustomCarousel() {
-  const location = useLocation();
+  const [coursesList, setCoursesList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AOS.init(); // Initialize AOS
+    AOS.init();
+
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        const res = await coursesApi.getAll();
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const seen = new Set();
+          const unique = [];
+          res.data.forEach((c) => {
+            const key = c.course_key || c.id;
+            if (!seen.has(key)) {
+              seen.add(key);
+              unique.push(c);
+            }
+          });
+          setCoursesList(unique);
+        } else {
+          setCoursesList([]);
+        }
+      } catch (err) {
+        console.error('Failed to load courses for CustomCarousel:', err);
+        setCoursesList([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
   }, []);
 
   const scrollToTop = () => {
@@ -30,30 +71,40 @@ export default function CustomCarousel() {
       
       <h1 className="text-center my-4" id="title-1"> Course Details</h1>
       
-      <div className="row g-4">
-        {[
-          { title: "Group-I", link: "/Group1", description: "For more Group-I exam details." },
-          { title: "Group-II", link: "/Group2", description: "For more Group-II exam details." },
-          { title: "Group-II-A", link: "/Group-2A", description: "For more Group-II-A exam details." },
-          { title: "Group-IV", link: "/Group4", description: "For more Group-IV exam details." },
-        
-          { title: "SI (Technical)", link: "/Si-Recruitment", description: "For more SI (Technical) exam details." },
-          { title: "SI (Finger Print)", link: "/Si-FingerFrint", description: "For more SI (Finger Print) exam details." },
-          { title: "Common Recruitment", link: "/Common", description: "For more Common Recruitment exam details." },
-          { title: "Joint Recruitment (SIs & SO)", link: "/JointRecritment", description: "For more Joint Recruitment (SIs & SO) exam details." }
-        ].map((course, index) => (
-          <div className="col-12 col-md-6 col-lg-4" key={index}>
-            <div className="course-card d-flex align-items-center" data-aos={`zoom-in-${index % 2 === 0 ? 'right' : 'left'}`}>
-              <FontAwesomeIcon icon={faUser} className="course-icon me-3" />
-              <div>
-                <h5 className="course-title text-center">{course.title}</h5>
-                <p className="course-description">{course.description}</p>
-                <Link to={course.link} className="btn btn-primary d-flex justify-content-center"  onClick={() => { scrollToTop();  }}>Read More</Link>
-              </div>
-            </div>
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-warning" role="status">
+            <span className="visually-hidden">Loading courses...</span>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="row g-4">
+          {coursesList.map((course, index) => {
+            const link = KEY_TO_ROUTE[course.course_key] || `/${course.course_key || 'Group1'}`;
+            const title = course.title || course.syllabus || 'Course';
+            const description = course.subject || `Comprehensive syllabus and preparation guide for ${title}.`;
+
+            return (
+              <div className="col-12 col-md-6 col-lg-4" key={course.id || index}>
+                <div className="course-card d-flex align-items-center" data-aos={`zoom-in-${index % 2 === 0 ? 'right' : 'left'}`}>
+                  <FontAwesomeIcon icon={faUser} className="course-icon me-3" />
+                  <div>
+                    <h5 className="course-title text-center">{title}</h5>
+                    <p className="course-description">{description}</p>
+                    <Link
+                      to={link}
+                      className="btn btn-primary d-flex justify-content-center"
+                      onClick={() => { scrollToTop(); }}
+                    >
+                      Read More
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

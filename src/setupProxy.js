@@ -682,6 +682,85 @@ const db = {
       description: 'General Knowledge & Logical Reasoning with Physical Endurance Standards',
       status: 'ACTIVE'
     }
+  ],
+  eligibility: [
+    {
+      id: 1,
+      postName: "TNPSC Group I Services",
+      minAge: "21 Years",
+      maxAgeSCST: "35 Years",
+      maxAgeOthers: "30 Years",
+      qualification: "Any Degree",
+      image: "/group3.jpg",
+      status: "ACTIVE"
+    },
+    {
+      id: 2,
+      postName: "TNPSC Group II Services",
+      minAge: "21 Years",
+      maxAgeSCST: "No Maximum Age Limit",
+      maxAgeOthers: "30 Years",
+      qualification: "Any Degree",
+      image: "/group3.jpg",
+      status: "ACTIVE"
+    },
+    {
+      id: 3,
+      postName: "TNPSC Group II A Services (Non-Interview post)",
+      minAge: "21 Years",
+      maxAgeSCST: "No Maximum Age Limit",
+      maxAgeOthers: "30 Years",
+      qualification: "Any Degree",
+      image: "/group3.jpg",
+      status: "ACTIVE"
+    },
+    {
+      id: 4,
+      postName: "TNPSC Group IV & VAO Exams",
+      minAge: "21 Years",
+      maxAgeSCST: "No Maximum Age Limit",
+      maxAgeOthers: "No Maximum Age Limit",
+      qualification: "10th Std",
+      image: "/group4.jpg",
+      status: "ACTIVE"
+    }
+  ],
+  about_pillars: [
+    {
+      id: 1,
+      number: '01',
+      title: 'Crossing Socio-Economic Barriers',
+      description: 'Bharathi Academy was founded with the explicit mission to eliminate commercial hurdles and help aspiring students from underprivileged and rural backgrounds enter Government Service through Competitive Exams.',
+      status: 'ACTIVE'
+    },
+    {
+      id: 2,
+      number: '02',
+      title: 'Mentored by Serving Government Officers',
+      description: 'Classes are conducted by officers currently serving in various Tamil Nadu Government departments. They volunteer their weekends purely with the intention to serve society and share their firsthand strategies with fellow students.',
+      status: 'ACTIVE'
+    },
+    {
+      id: 3,
+      number: '03',
+      title: '100% Free High-Quality Training',
+      description: 'As Bharathi Academy is founded only with the aim of supporting aspiring candidates, foundational classes and mentorship are provided at zero cost. Complete guidance is provided across every stage of the syllabus.',
+      status: 'ACTIVE'
+    },
+    {
+      id: 4,
+      number: '04',
+      title: 'Intensive Batches for All Exams in Erode',
+      description: 'Various specialized batches are conducted for TNPSC Group 1, Group 2, Group 2A, Group 4 & VAO, and TNUSRB Sub-Inspector & Police Constable exams at our dedicated study center in Erode.',
+      status: 'ACTIVE'
+    },
+    {
+      id: 5,
+      number: '05',
+      title: 'Nominal Test Paper Fee Only',
+      description: 'No tuition fee is ever charged. A nominal fee is collected strictly to cover paper printing and automated OMR evaluation machine expenses for our weekly test batches.',
+      status: 'ACTIVE'
+    }
   ]
 };
 
@@ -1426,6 +1505,163 @@ module.exports = function(app) {
 
   app.post('/api/payment/verify', (req, res) => {
     res.json({ status: 'success', verified: true, message: 'Enrollment confirmed.' });
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. Eligibility Requirements (Dynamic CRUD)
+  // ---------------------------------------------------------------------------
+  app.get('/api/eligibility', (req, res) => {
+    res.json(db.eligibility.filter(e => e.status !== 'DELETED'));
+  });
+
+  app.post('/api/eligibility', (req, res) => {
+    const newItem = {
+      id: db.eligibility.length + 1,
+      status: 'ACTIVE',
+      ...req.body
+    };
+    db.eligibility.push(newItem);
+    res.json(newItem);
+  });
+
+  app.put('/api/eligibility/:id', (req, res) => {
+    const idx = db.eligibility.findIndex(e => e.id === parseInt(req.params.id));
+    if (idx !== -1) {
+      db.eligibility[idx] = { ...db.eligibility[idx], ...req.body };
+      return res.json(db.eligibility[idx]);
+    }
+    res.status(404).json({ detail: 'Eligibility record not found' });
+  });
+
+  app.delete('/api/eligibility/:id', (req, res) => {
+    const idx = db.eligibility.findIndex(e => e.id === parseInt(req.params.id));
+    if (idx !== -1) db.eligibility[idx].status = 'DELETED';
+    res.json({ status: 'success' });
+  });
+
+  // ---------------------------------------------------------------------------
+  // 12. About Pillars / Institutional Commitments (Dynamic CRUD)
+  // ---------------------------------------------------------------------------
+  app.get('/api/about/pillars', (req, res) => {
+    res.json(db.about_pillars.filter(p => p.status !== 'DELETED'));
+  });
+
+  app.post('/api/about/pillars', (req, res) => {
+    const newPillar = {
+      id: db.about_pillars.length + 1,
+      number: String(db.about_pillars.length + 1).padStart(2, '0'),
+      status: 'ACTIVE',
+      ...req.body
+    };
+    db.about_pillars.push(newPillar);
+    res.json(newPillar);
+  });
+
+  app.put('/api/about/pillars/:id', (req, res) => {
+    const idx = db.about_pillars.findIndex(p => p.id === parseInt(req.params.id));
+    if (idx !== -1) {
+      db.about_pillars[idx] = { ...db.about_pillars[idx], ...req.body };
+      return res.json(db.about_pillars[idx]);
+    }
+    res.status(404).json({ detail: 'Pillar record not found' });
+  });
+
+  app.delete('/api/about/pillars/:id', (req, res) => {
+    const idx = db.about_pillars.findIndex(p => p.id === parseInt(req.params.id));
+    if (idx !== -1) db.about_pillars[idx].status = 'DELETED';
+    res.json({ status: 'success' });
+  });
+
+  // ---------------------------------------------------------------------------
+  // 13. Test Series PDF Question & Highlighted Answer Extractor
+  // ---------------------------------------------------------------------------
+  app.post('/api/pdf/extract-questions', (req, res) => {
+    try {
+      const { pdf_path, pdf_filename, pdf_base64 } = req.body || {};
+      let targetPath = null;
+
+      if (pdf_path && fs.existsSync(pdf_path)) {
+        targetPath = pdf_path;
+      } else if (pdf_filename) {
+        const candidate = path.join(__dirname, '..', 'public', path.basename(pdf_filename));
+        if (fs.existsSync(candidate)) targetPath = candidate;
+      } else if (pdf_base64) {
+        const tempName = `temp_extract_${Date.now()}.pdf`;
+        targetPath = path.join(__dirname, '..', 'public', tempName);
+        const buffer = Buffer.from(pdf_base64.replace(/^data:application\/pdf;base64,/, ''), 'base64');
+        fs.writeFileSync(targetPath, buffer);
+      } else {
+        // Default to sample test PDF
+        targetPath = path.join(__dirname, '..', 'public', 'SUNDAY GRP 4 SCHEDULE -2025.pdf');
+      }
+
+      if (!targetPath || !fs.existsSync(targetPath)) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'PDF file not found. Please upload or specify a valid PDF file path.'
+        });
+      }
+
+      const scriptPath = path.join(__dirname, '..', 'backend', 'extract_test_questions.py');
+      const publicDir = path.join(__dirname, '..', 'public');
+      const execCmd = `python3 "${scriptPath}" "${targetPath}" --output all --save-dir "${publicDir}"`;
+
+      const { exec } = require('child_process');
+      exec(execCmd, (error, stdout, stderr) => {
+        if (error) {
+          console.error('[PDF Extraction Error]', stderr || error.message);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to extract questions from PDF',
+            error: stderr || error.message
+          });
+        }
+
+        try {
+          const lines = stdout.trim().split('\n');
+          let jsonSummary = null;
+          for (let i = lines.length - 1; i >= 0; i--) {
+            try {
+              jsonSummary = JSON.parse(lines.slice(i).join('\n'));
+              break;
+            } catch (e) {}
+          }
+
+          const baseName = path.basename(targetPath, path.extname(targetPath));
+          const fullJsonFile = path.join(publicDir, `${baseName}_extracted.json`);
+          const fullTxtFile = path.join(publicDir, `${baseName}_extracted.txt`);
+
+          let fullData = null;
+          if (fs.existsSync(fullJsonFile)) {
+            fullData = JSON.parse(fs.readFileSync(fullJsonFile, 'utf8'));
+          }
+
+          let textData = null;
+          if (fs.existsSync(fullTxtFile)) {
+            textData = fs.readFileSync(fullTxtFile, 'utf8');
+          }
+
+          res.json({
+            status: 'success',
+            pdf_name: path.basename(targetPath),
+            total_questions: fullData?.total_questions_extracted || jsonSummary?.total_questions_extracted || 0,
+            answers_identified: fullData?.questions_with_detected_answers || jsonSummary?.questions_with_detected_answers || 0,
+            questions: fullData?.questions || [],
+            formatted_text: textData,
+            json_download_url: `/${path.basename(fullJsonFile)}`,
+            txt_download_url: `/${path.basename(fullTxtFile)}`
+          });
+        } catch (parseErr) {
+          res.json({
+            status: 'success',
+            raw_output: stdout,
+            pdf_name: path.basename(targetPath)
+          });
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ status: 'error', message: err.message });
+    }
   });
 
   console.log('[Dev Server Proxy] Fully initialized in-process API endpoints on /api');
