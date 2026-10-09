@@ -438,11 +438,4 @@ export const aboutApi = {
   deletePillar: (id) => api.delete(`/api/about/pillars/${id}`),
 };
 
-// PDF Test Series Question & Highlighted Answer Extractor Service
-export const pdfApi = {
-  extractQuestions: (payload) => api.post("/api/pdf/extract-questions", payload),
-  mergeQuestionsAndAnswers: (payload) => api.post("/api/pdf/merge-questions-answers", payload),
-  publishTest: (payload) => api.post("/api/pdf/publish-test", payload),
-};
-
 export default api;

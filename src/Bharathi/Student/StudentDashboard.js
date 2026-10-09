@@ -4,6 +4,7 @@ import { Modal, Button } from 'react-bootstrap';
 import Swal from 'sweetalert2';
 import {
   getMasterTests,
+  fetchMasterTestsFromDatabase,
   evaluateOMRSubmission,
   getStudentSubmissions,
 } from '../OMR/TestOMRDataManager';
@@ -121,13 +122,39 @@ const StudentDashboard = () => {
   const [viewingAnswerKeyTest, setViewingAnswerKeyTest] = useState(null);
 
   useEffect(() => {
-    const list = getMasterTests();
-    setTests(list);
-    if (list.length > 0) {
-      setSelectedTest(list[0]);
-    }
-    const history = getStudentSubmissions(student.rollNo);
-    setMySubmissions(history);
+    let isMounted = true;
+    const loadTestsAndSubmissions = async () => {
+      try {
+        const list = await fetchMasterTestsFromDatabase();
+        if (isMounted && list && list.length > 0) {
+          setTests(list);
+          setSelectedTest((prev) => prev || list[0]);
+        }
+      } catch (e) {
+        if (isMounted) {
+          const list = getMasterTests();
+          setTests(list);
+          if (list.length > 0) setSelectedTest((prev) => prev || list[0]);
+        }
+      }
+
+      try {
+        const subsRes = await omrApi.getSubmissions(student.rollNo);
+        const dbSubs = Array.isArray(subsRes.data) ? subsRes.data : (subsRes.data?.data || []);
+        if (isMounted && dbSubs && dbSubs.length > 0) {
+          setMySubmissions(dbSubs);
+          return;
+        }
+      } catch (err) {}
+
+      if (isMounted) {
+        const history = getStudentSubmissions(student.rollNo);
+        setMySubmissions(history);
+      }
+    };
+
+    loadTestsAndSubmissions();
+    return () => { isMounted = false; };
   }, [student.rollNo]);
 
   // Single-device session heartbeat checker

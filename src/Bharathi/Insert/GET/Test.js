@@ -444,9 +444,6 @@ const TestForm = () => {
                                 }}
                               />
                             </label>
-                            <Link to="/pdf-extractor" className="btn btn-sm btn-outline-primary p-1 px-2 text-decoration-none">
-                              <i className="bi bi-magic me-1"></i> PDF Question & Answer Extractor
-                            </Link>
                             <button
                               type="button"
                               className="btn btn-sm btn-link p-0 text-decoration-none"

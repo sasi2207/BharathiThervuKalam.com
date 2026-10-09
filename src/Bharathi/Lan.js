@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { motion } from 'framer-motion';
 import PageLoader from './Common/PageLoader';
 
@@ -23,7 +23,6 @@ import TestSeries from './TestSeries';
 import Achivement from './Achivement';
 import Affairs from './Learn/Affairs';
 import RazorpayPayment from './Payment/Payment';
-import PdfQuestionExtractor from './Test/PdfQuestionExtractor';
 
 // Police Courses
 import RecruitmentPage from './Course/TNUSRB/SITechnical';
@@ -141,8 +140,8 @@ function GoogleTranslate() {
           <Route path="/Group-2A" element={<PublicLayout><Group_2A /></PublicLayout>} />
           <Route path="/Group4" element={<PublicLayout><Group4 /></PublicLayout>} />
           <Route path="/Test-Series" element={<PublicLayout><TestSeries /></PublicLayout>} />
-          <Route path="/pdf-extractor" element={<PublicLayout><PdfQuestionExtractor /></PublicLayout>} />
-          <Route path="/extract-questions" element={<PublicLayout><PdfQuestionExtractor /></PublicLayout>} />
+          <Route path="/pdf-extractor" element={<Navigate to="/Test-Series" replace />} />
+          <Route path="/extract-questions" element={<Navigate to="/Test-Series" replace />} />
           <Route path="/About" element={<PublicLayout><About /></PublicLayout>} />
           <Route path="/WhyAbout" element={<PublicLayout><WhyAbout /></PublicLayout>} />
           <Route path="/Faculty" element={<PublicLayout><Faculty /></PublicLayout>} />

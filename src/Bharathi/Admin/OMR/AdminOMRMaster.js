@@ -4,11 +4,13 @@ import { Modal, Button } from 'react-bootstrap';
 import Swal from 'sweetalert2';
 import {
   getMasterTests,
+  fetchMasterTestsFromDatabase,
   saveMasterTest,
   getAllSubmissions,
   evaluateOMRSubmission,
   parseAnswerKeyString,
 } from '../../OMR/TestOMRDataManager';
+import { omrApi } from '../../Api/Api';
 import '../../Admin/AdminDashboard.css';
 import '../../OMR/OMRSheet.css';
 
@@ -42,15 +44,45 @@ const AdminOMRMaster = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const list = getMasterTests();
-    setTests(list);
-    if (list.length > 0) {
-      const active = list[0];
-      setSelectedTestId(active.id);
-      setSelectedTest(active);
-      initKeyMap(active);
+  const loadData = async () => {
+    try {
+      const list = await fetchMasterTestsFromDatabase();
+      if (list && list.length > 0) {
+        setTests(list);
+        const active = list[0];
+        setSelectedTestId(active.id);
+        setSelectedTest(active);
+        initKeyMap(active);
+      } else {
+        const localList = getMasterTests();
+        setTests(localList);
+        if (localList.length > 0) {
+          const active = localList[0];
+          setSelectedTestId(active.id);
+          setSelectedTest(active);
+          initKeyMap(active);
+        }
+      }
+    } catch (e) {
+      const localList = getMasterTests();
+      setTests(localList);
+      if (localList.length > 0) {
+        const active = localList[0];
+        setSelectedTestId(active.id);
+        setSelectedTest(active);
+        initKeyMap(active);
+      }
     }
+
+    try {
+      const subsRes = await omrApi.getSubmissions();
+      const dbSubs = Array.isArray(subsRes.data) ? subsRes.data : (subsRes.data?.data || []);
+      if (dbSubs && dbSubs.length > 0) {
+        setSubmissions(dbSubs);
+        return;
+      }
+    } catch (err) {}
+
     const subs = getAllSubmissions();
     setSubmissions(subs);
   };

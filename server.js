@@ -875,84 +875,126 @@ app.get('/api/omr/master-keys', async (req, res) => {
   }
 });
 
-app.post('/api/omr/submit', async (req, res) => {
+app.post('/api/omr/master-keys', async (req, res) => {
   try {
-    const data = req.body || {};
-    const testId = parseInt(data.test_id || 1, 10);
-    const studentName = data.student_name || 'Enrolled Candidate';
-    const studentRoll = data.student_roll_no || 'BTK2026-0428';
-    const userAnswers = data.answers || {};
-
-    const test = (await mysqlDb.getTestById(testId)) || { total_questions: 25, positive_mark: 1.5, negative_mark: 0 };
-    const totalQ = test.total_questions || 25;
-    const dbKeys = await mysqlDb.getOmrKeys(testId);
-    const masterKeyMap = {};
-    dbKeys.forEach(k => { masterKeyMap[k.question_no] = k.correct_option; });
-
-    let correct = 0;
-    let incorrect = 0;
-    let attempted = 0;
-    const breakdown = [];
-    const patterns = ['A', 'B', 'C', 'D'];
-
-    for (let q = 1; q <= totalQ; q++) {
-      const userChoice = (userAnswers[q] || '').toUpperCase();
-      const correctChoice = masterKeyMap[q] || patterns[(q - 1) % 4];
-
-      let isCorrect = false;
-      if (['A', 'B', 'C', 'D'].includes(userChoice)) {
-        attempted++;
-        isCorrect = userChoice === correctChoice;
-        if (isCorrect) correct++;
-        else incorrect++;
+    const { test_id, testId, keys = {} } = req.body || {};
+    const tId = parseInt(test_id || testId || 1, 10);
+    for (const [qNo, opt] of Object.entries(keys)) {
+      const qNum = parseInt(qNo, 10);
+      if (qNum && opt) {
+        await mysqlDb.query(
+          `INSERT INTO omr_keys (test_id, question_no, correct_option, marks, explanation)
+           VALUES (?, ?, ?, 1.5, ?)
+           ON DUPLICATE KEY UPDATE correct_option = VALUES(correct_option)`,
+          [tId, qNum, String(opt).toUpperCase(), `Official Key for Q${qNum}`]
+        );
       }
-
-      breakdown.push({
-        question_no: q,
-        candidate_choice: userChoice || 'UNSHADED',
-        correct_choice: correctChoice,
-        is_correct: isCorrect
-      });
     }
+    res.json({ status: 'success', message: 'Master keys successfully stored in MySQL database' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    const unshaded = totalQ - attempted;
-    const posMark = test.positive_mark || 1.5;
-    const negMark = test.negative_mark || 0.0;
-    const rawScore = Math.max(0, Math.round(((correct * posMark) - (incorrect * negMark)) * 100) / 100);
-    const maxMarks = Math.round(totalQ * posMark * 100) / 100;
-    const percentage = maxMarks > 0 ? Math.round((rawScore / maxMarks) * 10000) / 100 : 0;
-    const accuracy = attempted > 0 ? Math.round((correct / attempted) * 10000) / 100 : 0;
-    const subCode = `OMR-${Math.floor(100000 + Math.random() * 900000)}`;
+  app.post('/api/omr/submit', async (req, res) => {
+    try {
+      const data = req.body || {};
+      const testId = parseInt(data.test_id || data.testId || 1, 10);
+      const studentName = data.student_name || data.studentName || 'Enrolled Candidate';
+      const studentRoll = data.student_roll_no || data.rollNo || data.student_roll || 'BTK2026-0428';
+      const userAnswers = data.answers || data.candidateAnswers || {};
 
-    const saved = await mysqlDb.saveOmrSubmission({
-      submission_code: subCode,
-      test_id: testId,
-      student_roll_no: studentRoll,
-      student_name: studentName,
-      total_questions: totalQ,
-      attempted_count: attempted,
-      correct_count: correct,
-      incorrect_count: incorrect,
-      unshaded_count: unshaded,
-      raw_score: rawScore,
-      max_marks: maxMarks,
-      percentage: percentage,
-      accuracy: accuracy,
-      simulated_rank: Math.floor(1 + Math.random() * 30),
-      cutoff_zone: percentage >= 70 ? 'Safe Selection Zone' : 'Moderate Contention Zone',
-      candidate_answers_json: userAnswers,
-      breakdown_json: breakdown,
-      time_spent_seconds: data.time_spent || 300
-    });
+      const test = (await mysqlDb.getTestById(testId)) || { total_questions: 25, positive_mark: 1.5, negative_mark: 0 };
+      const totalQ = test.total_questions || 25;
+      const dbKeys = await mysqlDb.getOmrKeys(testId);
+      const masterKeyMap = {};
+      dbKeys.forEach(k => { masterKeyMap[k.question_no] = k.correct_option; });
 
-    res.json({
-      status: 'success',
-      submission_code: subCode,
-      scorecard: {
-        ...saved,
-        breakdown
+      let correct = 0;
+      let incorrect = 0;
+      let attempted = 0;
+      const breakdown = [];
+      const patterns = ['A', 'B', 'C', 'D'];
+
+      for (let q = 1; q <= totalQ; q++) {
+        const userChoice = (userAnswers[q] || '').toUpperCase();
+        const correctChoice = masterKeyMap[q] || patterns[(q - 1) % 4];
+
+        let isCorrect = false;
+        if (['A', 'B', 'C', 'D'].includes(userChoice)) {
+          attempted++;
+          isCorrect = userChoice === correctChoice;
+          if (isCorrect) correct++;
+          else incorrect++;
+        }
+
+        breakdown.push({
+          question_no: q,
+          questionId: q,
+          candidate_choice: userChoice || 'UNSHADED',
+          candidateOption: userChoice || 'UNSHADED',
+          correct_choice: correctChoice,
+          correctOption: correctChoice,
+          is_correct: isCorrect,
+          isCorrect: isCorrect
+        });
       }
-    });
+
+      const unshaded = totalQ - attempted;
+      const posMark = test.positive_mark || 1.5;
+      const negMark = test.negative_mark || 0.0;
+      const rawScore = Math.max(0, Math.round(((correct * posMark) - (incorrect * negMark)) * 100) / 100);
+      const maxMarks = Math.round(totalQ * posMark * 100) / 100;
+      const percentage = maxMarks > 0 ? Math.round((rawScore / maxMarks) * 10000) / 100 : 0;
+      const accuracy = attempted > 0 ? Math.round((correct / attempted) * 10000) / 100 : 0;
+      const subCode = `OMR-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      const saved = await mysqlDb.saveOmrSubmission({
+        submission_code: subCode,
+        test_id: testId,
+        student_roll_no: studentRoll,
+        student_name: studentName,
+        total_questions: totalQ,
+        attempted_count: attempted,
+        correct_count: correct,
+        incorrect_count: incorrect,
+        unshaded_count: unshaded,
+        raw_score: rawScore,
+        max_marks: maxMarks,
+        percentage: percentage,
+        accuracy: accuracy,
+        simulated_rank: Math.floor(1 + Math.random() * 30),
+        cutoff_zone: percentage >= 70 ? 'Safe Selection Zone' : 'Moderate Contention Zone',
+        candidate_answers_json: userAnswers,
+        breakdown_json: breakdown,
+        time_spent_seconds: data.time_spent || data.timeSpentSeconds || 300
+      });
+
+      res.json({
+        status: 'success',
+        submissionId: subCode,
+        submission_code: subCode,
+        testId: testId,
+        studentName: studentName,
+        rollNo: studentRoll,
+        totalMarks: rawScore,
+        maxMarks: maxMarks,
+        totalQuestions: totalQ,
+        attemptedCount: attempted,
+        correctCount: correct,
+        wrongCount: incorrect,
+        skippedCount: unshaded,
+        percentage: percentage,
+        accuracy: accuracy,
+        simulatedRank: saved.simulated_rank || 1,
+        cutoffZone: saved.cutoff_zone,
+        questionBreakdown: breakdown,
+        scorecard: {
+          ...saved,
+          breakdown
+        },
+        data: saved
+      });
   } catch (err) {
     console.error('[OMR Submit Error]', err);
     res.status(500).json({ error: err.message });
@@ -1233,183 +1275,6 @@ app.delete('/api/users/:id', async (req, res) => {
   try {
     await mysqlDb.deleteUser(parseInt(req.params.id, 10));
     res.json({ status: 'success' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// 11. PDF Question & Answer Extraction Engine
-// -----------------------------------------------------------------------------
-const { 
-  extractQuestionsFromPdfBuffer, 
-  formatQuestionsAsCleanText,
-  parseAnswerKeyContent,
-  mergeQuestionsAndAnswers
-} = require('./backend/pdfExtractorHelper');
-
-app.post('/api/pdf/extract-questions', async (req, res) => {
-  try {
-    const { 
-      pdf_path, 
-      pdf_filename, 
-      pdf_base64,
-      answer_key_base64,
-      answer_key_content,
-      answer_key_filename
-    } = req.body || {};
-
-    let targetPath = null;
-    let fileBuffer = null;
-    let displayName = 'test_paper.pdf';
-
-    if (pdf_base64) {
-      const cleanBase64 = pdf_base64.replace(/^data:application\/pdf;base64,/, '');
-      fileBuffer = Buffer.from(cleanBase64, 'base64');
-      displayName = pdf_filename || `uploaded_test_${Date.now()}.pdf`;
-      const tempPath = path.join(__dirname, 'public', path.basename(displayName));
-      fs.writeFileSync(tempPath, fileBuffer);
-      targetPath = tempPath;
-    } else if (pdf_filename) {
-      displayName = path.basename(pdf_filename);
-      const candidate = path.join(__dirname, 'public', displayName);
-      if (fs.existsSync(candidate)) {
-        targetPath = candidate;
-        fileBuffer = fs.readFileSync(candidate);
-      }
-    } else if (pdf_path && fs.existsSync(pdf_path)) {
-      targetPath = pdf_path;
-      displayName = path.basename(pdf_path);
-      fileBuffer = fs.readFileSync(pdf_path);
-    } else {
-      const defaultPdf = path.join(__dirname, 'public', 'SUNDAY GRP 4 SCHEDULE -2025.pdf');
-      if (fs.existsSync(defaultPdf)) {
-        targetPath = defaultPdf;
-        displayName = 'SUNDAY GRP 4 SCHEDULE -2025.pdf';
-        fileBuffer = fs.readFileSync(defaultPdf);
-      }
-    }
-
-    if (!fileBuffer || fileBuffer.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'PDF file not found. Please upload or specify a valid PDF file path.'
-      });
-    }
-
-    const publicDir = path.join(__dirname, 'public');
-    const baseName = path.basename(displayName, path.extname(displayName));
-
-    const extractedData = await extractQuestionsFromPdfBuffer(fileBuffer, displayName);
-
-    let parsedKeyMap = {};
-    if (answer_key_base64) {
-      const cleanKeyBase64 = answer_key_base64.replace(/^data:[^;]+;base64,/, '');
-      const keyBuffer = Buffer.from(cleanKeyBase64, 'base64');
-      parsedKeyMap = await parseAnswerKeyContent(keyBuffer);
-    } else if (answer_key_content) {
-      parsedKeyMap = await parseAnswerKeyContent(answer_key_content);
-    }
-
-    if (Object.keys(parsedKeyMap).length > 0) {
-      const merged = mergeQuestionsAndAnswers(extractedData.questions, parsedKeyMap);
-      extractedData.questions = merged.questions;
-      extractedData.answers_identified = merged.answers_identified;
-      extractedData.answer_key_map = parsedKeyMap;
-      extractedData.answer_key_source = answer_key_filename || 'Uploaded Answer Key File';
-    }
-
-    const textFormatted = formatQuestionsAsCleanText(extractedData);
-    const fullJsonFile = path.join(publicDir, `${baseName}_extracted.json`);
-    const fullTxtFile = path.join(publicDir, `${baseName}_extracted.txt`);
-
-    fs.writeFileSync(fullJsonFile, JSON.stringify(extractedData, null, 2), 'utf8');
-    fs.writeFileSync(fullTxtFile, textFormatted, 'utf8');
-
-    return res.json({
-      status: 'success',
-      pdf_name: displayName,
-      total_pages: extractedData.total_pages,
-      total_questions: extractedData.total_questions_extracted,
-      answers_identified: extractedData.questions_with_detected_answers || extractedData.answers_identified,
-      raw_highlights_detected: extractedData.raw_highlights_detected,
-      raw_red_text_detected: extractedData.raw_red_text_detected,
-      questions: extractedData.questions,
-      answer_key_map: parsedKeyMap,
-      formatted_text: textFormatted,
-      json_download_url: `/${path.basename(fullJsonFile)}`,
-      txt_download_url: `/${path.basename(fullTxtFile)}`
-    });
-  } catch (err) {
-    console.error('[PDF Extraction Error]', err);
-    res.status(500).json({ status: 'error', message: err.message });
-  }
-});
-
-app.post('/api/pdf/merge-questions-answers', async (req, res) => {
-  try {
-    const { questions, answer_key_content, answer_key_base64 } = req.body || {};
-    let keyMap = {};
-
-    if (answer_key_base64) {
-      const cleanKeyBase64 = answer_key_base64.replace(/^data:[^;]+;base64,/, '');
-      const keyBuffer = Buffer.from(cleanKeyBase64, 'base64');
-      keyMap = await parseAnswerKeyContent(keyBuffer);
-    } else if (answer_key_content) {
-      keyMap = await parseAnswerKeyContent(answer_key_content);
-    }
-
-    const merged = mergeQuestionsAndAnswers(questions || [], keyMap);
-    res.json({
-      status: 'success',
-      key_count: Object.keys(keyMap).length,
-      answers_identified: merged.answers_identified,
-      questions: merged.questions,
-      keyMap
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/pdf/publish-test', async (req, res) => {
-  try {
-    const { 
-      title, 
-      category = 'TNPSC', 
-      department = 'Group IV',
-      paper = 'General Studies & Tamil',
-      duration_minutes = 180,
-      questions = [],
-      pdf_filename
-    } = req.body || {};
-
-    const testCode = `extracted-mock-${Date.now()}`;
-    const result = await mysqlDb.query(
-      'INSERT INTO tests (test_code, title, category, department, paper, standard, total_questions, duration_minutes, positive_mark, negative_mark, filename, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        testCode,
-        title || 'Extracted Mock Test',
-        category,
-        department,
-        paper,
-        'Official Model',
-        questions.length || 200,
-        duration_minutes || 180,
-        1.5,
-        0.0,
-        pdf_filename || 'extracted_test.pdf',
-        'ACTIVE'
-      ]
-    );
-
-    const created = await mysqlDb.getTestById(result.insertId);
-
-    res.json({
-      status: 'success',
-      message: 'Test successfully published to statewide test series & student portal!',
-      test: created
-    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
