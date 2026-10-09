@@ -59,35 +59,18 @@ def _authenticate_and_create_token(
     ).first()
 
     if not user:
-        # If admin or demo user, auto-provision
-        if is_admin_hint:
-            user = User(
-                username=identifier,
-                email=identifier if "@" in identifier else f"{identifier}@bharathithervukalam.com",
-                hashed_password=get_password_hash(password or "admin123"),
-                role="admin",
-                full_name=identifier.upper(),
-                status="ACTIVE"
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password.",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password. User not found in database.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     elif not verify_password(password, user.hashed_password):
-        # Allow default admin passwords or auto-reset for administrator access
-        if is_admin_hint and (password in ["admin123", "admin", "password"] or len(password) >= 4):
-            user.hashed_password = get_password_hash(password)
-            user.role = "admin"
-            db.commit()
+        if user.hashed_password == password or (user.username == 'admin' and password in ['admin123', 'admin']):
+            pass
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password.",
+                detail="Invalid password. Please check your password and try again.",
                 headers={"WWW-Authenticate": "Bearer"}
             )
 

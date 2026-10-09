@@ -126,31 +126,26 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     setLoading(true);
     try {
-      const trimmedUser = username.trim();
-      const lower = trimmedUser.toLowerCase();
-      const isAdminIdentifier =
-        lower === 'admin' ||
-        lower.includes('admin') ||
-        lower === 'techsasi22@gmail.com' ||
-        lower === 'techsasi_2207' ||
-        lower === 'sasi2207' ||
-        lower === 'sasi' ||
-        lower.includes('sasi') ||
-        lower.includes('director') ||
-        lower.includes('principal') ||
-        lower.includes('manager');
+      const trimmedUser = (username || '').trim();
+      const trimmedPass = (password || '').trim();
+
+      if (!trimmedUser || !trimmedPass) {
+        throw new Error('Please enter both username/email and password.');
+      }
 
       const response = await axiosInstance.post('/api/auth/login', {
         username: trimmedUser,
-        password: password.trim(),
+        password: trimmedPass,
       });
 
       const data = response.data || {};
-      const accessToken = data.access_token || data.token || 'auth_token_' + Date.now();
-      let userRole = (data.role || (data.user && data.user.role) || (isAdminIdentifier ? 'admin' : 'student')).toLowerCase();
-      if (isAdminIdentifier) {
-        userRole = 'admin';
+      const accessToken = data.access_token || data.token;
+      if (!accessToken) {
+        throw new Error('Authentication response did not contain an access token.');
       }
+
+      const rawRole = (data.role || (data.user && data.user.role) || 'student').toLowerCase();
+      const userRole = rawRole.includes('admin') ? 'admin' : rawRole;
 
       const userData = {
         id: data.user_id || (data.user && data.user.id) || 1,

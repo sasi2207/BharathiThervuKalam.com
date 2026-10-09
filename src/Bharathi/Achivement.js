@@ -6,241 +6,51 @@ import { achieversApi } from './Api/Api';
 
 export default function Achivement() {
   const [achieversList, setAchieversList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [selectedAchiever, setSelectedAchiever] = useState(null);
 
-  const defaultAchievers = [
-    {
-      id: 1,
-      name: 'R. Vignesh, M.E.',
-      posting: 'Deputy Superintendent of Police (DSP)',
-      cadre: 'State Civil Police Service',
-      exam: 'TNPSC Group I',
-      category: 'group1',
-      year: '2023',
-      department: 'Tamil Nadu Police Service (TNPS)',
-      hometown: 'Erode',
-      rank: 'State Rank 4',
-      badgeColor: '#fbbf24',
-      badgeLabel: 'Group 1 Gazetted',
-      story: 'Cracked in first attempt with guidance from Bharathi Academy mentors. Attended Saturday mock test series without missing a single week.',
-      advice: 'Master the school textbooks and practice answer writing under timed conditions. Bharathi test keys give pinpoint clarity.'
-    },
-    {
-      id: 2,
-      name: 'S. Divya, B.Sc.',
-      posting: 'Sub-Registrar (Grade II)',
-      cadre: 'Registration Executive Cadre',
-      exam: 'TNPSC Group II',
-      category: 'group2',
-      year: '2022',
-      department: 'Registration Department',
-      hometown: 'Coimbatore',
-      rank: 'Top 15 Overall',
-      badgeColor: '#60a5fa',
-      badgeLabel: 'Group 2 Executive',
-      story: 'Overcame rural background through 100% free mentorship and intensive interview coaching by serving Joint Sub-Registrar mentors.',
-      advice: 'General Tamil syllabus is the biggest game-changer. Never ignore daily current affairs revisions.'
-    },
-    {
-      id: 3,
-      name: 'P. Arulselvan, B.Com.',
-      posting: 'Sub-Inspector of Police (Taluk)',
-      cadre: 'Uniformed Services Executive',
-      exam: 'TNUSRB Joint Recruitment',
-      category: 'police',
-      year: '2023',
-      department: 'Law & Order Wing, Coimbatore City',
-      hometown: 'Salem',
-      rank: 'State Physical & Written Top Rank',
-      badgeColor: '#34d399',
-      badgeLabel: 'Police Sub-Inspector',
-      story: 'Balanced physical endurance drills alongside 50+ Bharathi Academy full-length police mock tests.',
-      advice: 'Maintain equal dedication between physical fitness test and GS aptitude papers. Consistency beats brilliance.'
-    },
-    {
-      id: 4,
-      name: 'K. Manikandan, M.A.',
-      posting: 'Assistant Section Officer (ASO)',
-      cadre: 'Secretariat Ministerial Cadre',
-      exam: 'TNPSC Group II',
-      category: 'group2',
-      year: '2023',
-      department: 'Secretariat, Fort St. George, Chennai',
-      hometown: 'Namakkal',
-      rank: 'Merit Selection',
-      badgeColor: '#60a5fa',
-      badgeLabel: 'Group 2 Secretariat',
-      story: 'Prepared while working a day job. The weekend test batches and online PDF materials made self-study feasible and structured.',
-      advice: 'Analyze every error in your weekly OMR sheet. Improving 5 weak areas every test guarantees selection.'
-    },
-    {
-      id: 5,
-      name: 'M. Kavitha, B.A.',
-      posting: 'Village Administrative Officer (VAO)',
-      cadre: 'Revenue Administration Cadre',
-      exam: 'TNPSC Group IV & VAO',
-      category: 'group4',
-      year: '2024',
-      department: 'Revenue Administration, Erode Taluk',
-      hometown: 'Erode',
-      rank: 'District 1st in PSTM Quota',
-      badgeColor: '#f472b6',
-      badgeLabel: 'Group 4 & VAO',
-      story: 'Tamil medium candidate who maximized the 20% PSTM reservation quota with scoring 98/100 in General Tamil.',
-      advice: 'Samacheer Kalvi books from 6th to 12th standard are your holy scripture for Group 4 exams.'
-    },
-    {
-      id: 6,
-      name: 'A. Sathish Kumar, B.E.',
-      posting: 'Sub-Inspector of Police (Technical)',
-      cadre: 'Police Technical Wing',
-      exam: 'TNUSRB SI Technical',
-      category: 'police',
-      year: '2023',
-      department: 'Police Telecommunication Directorate',
-      hometown: 'Tiruppur',
-      rank: 'State Rank 7',
-      badgeColor: '#34d399',
-      badgeLabel: 'SI Technical',
-      story: 'Utilized engineering background with Bharathi specialized electronics guidance sessions.',
-      advice: 'Focus heavily on core technical fundamentals and daily Tamil eligibility mock tests.'
-    },
-    {
-      id: 7,
-      name: 'T. Gokul, B.Sc.',
-      posting: 'Junior Assistant (Judicial)',
-      cadre: 'Judicial Ministerial Service',
-      exam: 'TNPSC Group IV',
-      category: 'group4',
-      year: '2024',
-      department: 'Judicial Ministerial Service',
-      hometown: 'Erode',
-      rank: 'State Merit Rank',
-      badgeColor: '#f472b6',
-      badgeLabel: 'Judicial Service',
-      story: 'Dedicated student who spent 10 hours daily at the Bharathi study library and cleared in his 2nd attempt.',
-      advice: 'Never skip mock OMR shading practice. Time management in the 3-hour hall is 50% of the battle.'
-    },
-    {
-      id: 8,
-      name: 'R. Soundarya, M.Com.',
-      posting: 'Revenue Assistant',
-      cadre: 'Revenue Subordinate Service',
-      exam: 'TNPSC Group II-A',
-      category: 'group2',
-      year: '2023',
-      department: 'District Collectorate, Erode',
-      hometown: 'Gobichettipalayam',
-      rank: 'Top 30 Merit',
-      badgeColor: '#60a5fa',
-      badgeLabel: 'Revenue Assistant',
-      story: 'Mother of one who managed family and study with unwavering discipline and supportive faculty mentoring.',
-      advice: 'Believe in yourself. Age or marital status is never a barrier to serving the public in Tamil Nadu government.'
-    },
-    {
-      id: 9,
-      name: 'G. Karthikeyan, B.Sc.',
-      posting: 'Sub-Inspector of Police (Finger Print)',
-      cadre: 'Forensic Investigation Cadre',
-      exam: 'TNUSRB SI Finger Print',
-      category: 'police',
-      year: '2022',
-      department: 'Forensic Science & Crime Bureau',
-      hometown: 'Bhavani',
-      rank: 'State Rank 3',
-      badgeColor: '#34d399',
-      badgeLabel: 'SI Finger Print',
-      story: 'Trained under serving police mentors at Bharathi Academy who provided hands-on interview orientation.',
-      advice: 'Physics and Chemistry fundamentals must be rock-solid along with high mental ability scores.'
-    },
-    {
-      id: 10,
-      name: 'N. Priya, B.A. (Tamil)',
-      posting: 'Executive Officer (Grade IV)',
-      cadre: 'HR&CE Administrative Wing',
-      exam: 'TNPSC HR&CE Services',
-      category: 'group4',
-      year: '2023',
-      department: 'Hindu Religious & Charitable Endowments',
-      hometown: 'Dharapuram',
-      rank: 'State Merit Selection',
-      badgeColor: '#f472b6',
-      badgeLabel: 'HR&CE Officer',
-      story: 'Leveraged deep knowledge of Tamil literature and Saivism/Vaishnavism taught by academy guest scholars.',
-      advice: 'Specific departmental act papers require dedicated notes. Academy handouts were invaluable.'
-    },
-    {
-      id: 11,
-      name: 'S. Rajesh, 12th Pass',
-      posting: 'Police Constable (Grade II)',
-      cadre: 'Armed Reserve Police',
-      exam: 'TNUSRB Common Recruitment',
-      category: 'police',
-      year: '2024',
-      department: 'Armed Reserve (AR), Salem',
-      hometown: 'Mettur',
-      rank: 'Physical Full Marks (15/15)',
-      badgeColor: '#34d399',
-      badgeLabel: 'Police Constable',
-      story: 'Achieved dream uniform directly after school with free coaching and ground physical coaching provided at Erode.',
-      advice: 'Start rope climbing and 1500m running 4 months before notification. Don’t wait until the last month.'
-    },
-    {
-      id: 12,
-      name: 'V. Bharathi, B.Com.',
-      posting: 'Typist (Secretariat)',
-      cadre: 'Secretariat Clerical Service',
-      exam: 'TNPSC Group IV & Typist',
-      category: 'group4',
-      year: '2024',
-      department: 'Personnel & Administrative Reforms',
-      hometown: 'Perundurai',
-      rank: 'Top Rank in Typing Quota',
-      badgeColor: '#f472b6',
-      badgeLabel: 'Secretariat Typist',
-      story: 'Holding Tamil & English Both Higher technical certificate gave immediate edge in Group 4 Typist counselling.',
-      advice: 'Technical typewriter qualification guarantees you a posting even with a moderate GS score.'
-    }
-  ];
-
   useEffect(() => {
     const fetchAchievers = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const response = await achieversApi.getAll();
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          const merged = response.data.map((item, index) => ({
-            id: item.id || `api-${index}`,
-            name: item.name || item.candidateName || item.username || 'Officer Candidate',
-            posting: item.posting || item.namepost || item.designation || 'State Govt. Officer',
-            cadre: item.cadre || item.department || 'State Administrative Service',
-            exam: item.exam || item.syllabus || 'TNPSC Examination',
-            category: (item.exam || '').toLowerCase().includes('police') || (item.namepost || '').toLowerCase().includes('si') ? 'police' : 'group2',
-            year: item.year || item.batch || '2023',
-            department: item.department || 'Government of Tamil Nadu',
-            hometown: item.hometown || item.district || 'Tamil Nadu',
-            rank: item.rank || 'Merit Selection',
-            badgeColor: '#fbbf24',
-            badgeLabel: item.exam || 'Civil Cadre',
-            story: item.story || 'Trained and mentored at Bharathi Academy with weekly OMR test batches.',
-            advice: item.advice || 'Consistent revision of school books and weekly mock test evaluation is key.'
-          }));
-          setAchieversList(merged);
-        } else {
-          setAchieversList(defaultAchievers);
-        }
-      } catch (error) {
-        setAchieversList(defaultAchievers);
+        const records = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        const formatted = records.map((item, index) => ({
+          id: item.id || `api-${index}`,
+          name: item.name || item.candidateName || item.username || 'Officer Candidate',
+          posting: item.posting || item.namepost || item.designation || 'State Govt. Officer',
+          cadre: item.cadre || item.department || 'State Administrative Service',
+          exam: item.exam || item.syllabus || 'TNPSC Examination',
+          category: item.category || ((item.exam || '').toLowerCase().includes('police') || (item.posting || '').toLowerCase().includes('si') ? 'police' : 'group2'),
+          year: item.year || item.batch || '2023',
+          department: item.department || 'Government of Tamil Nadu',
+          hometown: item.hometown || item.district || 'Tamil Nadu',
+          rank: item.rank_text || item.rank || 'Merit Selection',
+          badgeColor: (item.category === 'group1') ? '#fbbf24' : (item.category === 'police') ? '#34d399' : (item.category === 'group4') ? '#f472b6' : '#60a5fa',
+          badgeLabel: item.category === 'group1' ? 'Group 1 Gazetted' : item.category === 'police' ? 'Police Services' : item.category === 'group4' ? 'Group 4 & VAO' : 'Group 2 Executive',
+          story: item.story || 'Trained and mentored at Bharathi Academy with weekly test batches.',
+          advice: item.advice || 'Master standard textbooks and practice answer writing under timed conditions.'
+        }));
+        setAchieversList(formatted);
+      } catch (err) {
+        console.error('Failed to load dynamic achievers:', err);
+        setError('Failed to fetch achievers data from database.');
+        setAchieversList([]);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchAchievers();
   }, []);
 
-  const dataList = achieversList.length > 0 ? achieversList : defaultAchievers;
+  const dataList = achieversList;
 
   // Filter & Search Logic
   const filteredAchievers = dataList.filter(item => {
@@ -584,7 +394,40 @@ export default function Achivement() {
         </div>
 
         {/* 4. Display Content: Cards Grid OR Directory Table */}
-        {filteredAchievers.length === 0 ? (
+        {loading ? (
+          <div 
+            className="p-5 text-center rounded-4 my-4"
+            style={{
+              background: 'var(--canvas-surface)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            <div className="spinner-border text-warning mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <h5 className="fw-bold" style={{ color: 'var(--text-main)' }}>Loading Officer Achievers...</h5>
+            <p className="text-muted small mb-0">Retrieving real-time records from academic database.</p>
+          </div>
+        ) : error ? (
+          <div 
+            className="p-5 text-center rounded-4 my-4"
+            style={{
+              background: 'var(--canvas-surface)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            <i className="bi bi-exclamation-triangle-fill fs-1 text-danger mb-3 d-block"></i>
+            <h5 className="fw-bold text-danger">{error}</h5>
+            <button 
+              onClick={() => window.location.reload()}
+              className="btn btn-outline-danger btn-sm rounded-3 px-4 fw-semibold mt-2"
+            >
+              Retry Connection
+            </button>
+          </div>
+        ) : filteredAchievers.length === 0 ? (
           <div 
             className="p-5 text-center rounded-4 my-4"
             style={{

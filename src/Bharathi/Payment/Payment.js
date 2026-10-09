@@ -22,11 +22,8 @@ const RazorpayCheckout = () => {
 
     const handlePayment = async () => {
         try {
-            const response = await paymentApi.createOrder(1).catch(() => ({
-                data: { id: 'order_mock_' + Date.now() }
-            }));
-
-            const data = response?.data || { id: 'order_mock_' + Date.now() };
+            const response = await paymentApi.createOrder(1);
+            const data = response?.data || {};
 
             const options = {
                 key: "rzp_live_SrOakxuQjuZX6K",

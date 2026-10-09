@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from './img1/Logo.png';
 import Swal from 'sweetalert2';
+import { coursesApi, studentApi } from './Api/Api';
 
 export default function Topnav() {
   const [activeTab, setActiveTab] = useState('all');
+  const [coursesList, setCoursesList] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -14,6 +17,46 @@ export default function Topnav() {
     qualification: 'Any Degree'
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  useEffect(() => {
+    coursesApi.getAll().then(res => {
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      const streams = {};
+      const routeMap = {
+        group1: '/Group1',
+        group2: '/Group2',
+        group2A: '/Group-2A',
+        group4: '/Group4',
+        jointRecruitment: '/JointRecritment',
+        siTechnical: '/Si-Recruitment',
+        siFingerprint: '/Si-FingerFrint',
+        commonRecruitment: '/Common'
+      };
+
+      data.forEach(c => {
+        const key = c.course_key || 'group1';
+        if (!streams[key]) {
+          const cat = (c.category || '').toLowerCase();
+          streams[key] = {
+            id: c.id,
+            category: cat.includes('tnusrb') ? 'tnusrb' : 'tnpsc',
+            title: c.title,
+            subtitle: c.subject || c.department || 'Examination Guidance Batch',
+            qualification: c.qualification || (key === 'group4' || key === 'commonRecruitment' ? '10th Standard (SSLC) / Higher' : 'Any Bachelor Degree'),
+            ageLimit: c.age_limit || (cat.includes('tnusrb') ? '20 to 30 Years' : '18 to 39 Years'),
+            scheme: c.paper ? `${c.paper} · ${c.subject}` : 'Preliminary & Main Examination Scheme',
+            link: routeMap[key] || '/Group1',
+            badge: cat.includes('tnusrb') ? 'Uniformed Service' : 'State Civil Service'
+          };
+        }
+      });
+      setCoursesList(Object.values(streams));
+      setLoadingCourses(false);
+    }).catch(err => {
+      console.warn('Error loading courses from database:', err);
+      setLoadingCourses(false);
+    });
+  }, []);
 
   const handleDownload = (filename, label) => {
     const link = document.createElement('a');
@@ -39,7 +82,7 @@ export default function Topnav() {
     });
   };
 
-  const handleInquirySubmit = (e) => {
+  const handleInquirySubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.phone) {
       Swal.fire({
@@ -51,114 +94,35 @@ export default function Topnav() {
     }
 
     setFormSubmitting(true);
-    setTimeout(() => {
-      setFormSubmitting(false);
-      Swal.fire({
-        icon: 'success',
-        title: 'Admission Inquiry Submitted',
-        html: `Thank you <b>${formData.name}</b>! Our mentor team from Bharathi Academy will contact you at <b>${formData.phone}</b> with batch timings and study materials for <b>${formData.targetExam}</b>.`,
-        confirmButtonColor: '#0b1e42'
+    try {
+      await studentApi.create({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email || `${formData.phone}@inquiry.bharathithervukalam.com`,
+        qualification: formData.qualification,
+        target_exam: formData.targetExam,
+        source: 'Website Admission Inquiry',
+        status: 'INQUIRY'
       });
-      setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        targetExam: 'TNPSC Group 4',
-        qualification: 'Any Degree'
-      });
-    }, 600);
+    } catch (e) {}
+
+    setFormSubmitting(false);
+    Swal.fire({
+      icon: 'success',
+      title: 'Admission Inquiry Submitted',
+      html: `Thank you <b>${formData.name}</b>! Our mentor team from Bharathi Academy will contact you at <b>${formData.phone}</b> with batch timings and study materials for <b>${formData.targetExam}</b>.`,
+      confirmButtonColor: '#0b1e42'
+    });
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      targetExam: 'TNPSC Group 4',
+      qualification: 'Any Degree'
+    });
   };
 
-  const courses = [
-    {
-      id: 'g1',
-      category: 'tnpsc',
-      title: 'TNPSC Group I',
-      subtitle: 'Deputy Collector, DSP, Commercial Tax Officer',
-      qualification: 'Any Degree',
-      ageLimit: '21 to 39 Years',
-      scheme: 'Prelims (175 GS + 25 Aptitude) + 3 Mains Papers + Oral Interview',
-      link: '/Group1',
-      badge: 'Premier Service'
-    },
-    {
-      id: 'g2',
-      category: 'tnpsc',
-      title: 'TNPSC Group II',
-      subtitle: 'Sub-Registrar, Municipal Commissioner, ASO',
-      qualification: 'Any Degree',
-      ageLimit: '21 to 32+ Years (Relaxation available)',
-      scheme: 'Preliminary Exam + Main Written Exam + Interview',
-      link: '/Group2',
-      badge: 'Interview Posts'
-    },
-    {
-      id: 'g2a',
-      category: 'tnpsc',
-      title: 'TNPSC Group II-A',
-      subtitle: 'Secretariat Assistant, Revenue Assistant, Accountant',
-      qualification: 'Any Degree',
-      ageLimit: '18 to 32+ Years',
-      scheme: 'Single Stage Competitive Examination / Main Exam',
-      link: '/Group-2A',
-      badge: 'Non-Interview Posts'
-    },
-    {
-      id: 'g4',
-      category: 'tnpsc',
-      title: 'TNPSC Group IV & VAO',
-      subtitle: 'Village Administrative Officer, Junior Assistant, Typist',
-      qualification: '10th Standard (SSLC) / Higher',
-      ageLimit: '21 to 42 Years (SC/ST/MBC relaxation)',
-      scheme: 'Single OMR Exam: 100 Tamil/English + 75 GS + 25 Aptitude',
-      link: '/Group4',
-      badge: 'Mass Recruitment'
-    },
-    {
-      id: 'si-tech',
-      category: 'tnusrb',
-      title: 'TNUSRB SI (Technical)',
-      subtitle: 'Sub-Inspector of Police (Technical Cadre)',
-      qualification: 'Diploma in Electronics & Comm. / Degree in Engineering',
-      ageLimit: '20 to 30 Years (Category relaxations apply)',
-      scheme: 'Written Exam (Technical Subjects & GK) + Physical Endurance',
-      link: '/Si-Recruitment',
-      badge: 'Technical Police'
-    },
-    {
-      id: 'si-fp',
-      category: 'tnusrb',
-      title: 'TNUSRB SI (Finger Print)',
-      subtitle: 'Sub-Inspector of Police (Finger Print Bureau)',
-      qualification: 'Degree in Science (B.Sc with Physics/Chemistry)',
-      ageLimit: '20 to 30 Years (Category relaxations apply)',
-      scheme: 'Written Exam (Science & Aptitude) + Viva-voce',
-      link: '/Si-FingerFrint',
-      badge: 'Forensic Wing'
-    },
-    {
-      id: 'si-joint',
-      category: 'tnusrb',
-      title: 'TNUSRB Joint Recruitment',
-      subtitle: 'Sub-Inspectors of Police (Taluk, AR, TSP) & Station Officers',
-      qualification: 'Any Bachelor Degree',
-      ageLimit: '20 to 30 Years (Age relaxations for SC/ST/MBC)',
-      scheme: 'Tamil Eligibility + Main Written + Physical Test + Viva-Voce',
-      link: '/JointRecritment',
-      badge: 'Executive Cadre'
-    },
-    {
-      id: 'si-common',
-      category: 'tnusrb',
-      title: 'TNUSRB Common Police',
-      subtitle: 'Police Constable (Grade II), Jail Warder, Firemen',
-      qualification: '10th Standard (SSLC) Pass',
-      ageLimit: '18 to 26+ Years',
-      scheme: 'Written Test + Physical Measurement & Endurance Test',
-      link: '/Common',
-      badge: 'Constabulary Cadre'
-    }
-  ];
+  const courses = coursesList;
 
   const filteredCourses = activeTab === 'all' 
     ? courses 

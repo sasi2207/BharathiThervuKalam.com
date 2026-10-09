@@ -13,17 +13,35 @@ const StudentLoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const inputUser = username.trim();
+    const inputPass = password.trim();
+
+    if (!inputUser || !inputPass) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Credentials',
+        text: 'Please enter both student username/roll number and password.',
+        confirmButtonColor: '#0a192f'
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await authApi.studentLogin({ username, password });
+      const response = await authApi.studentLogin({ username: inputUser, password: inputPass });
       const data = response?.data || {};
-      const studentToken = data.token || data.access_token || 'student_jwt_' + Date.now();
+      const studentToken = data.token || data.access_token;
+
+      if (!studentToken) {
+        throw new Error('Authentication failed: No token returned from server.');
+      }
+
       const studentUser = data.user || {
-        username,
-        role: 'student',
-        fullName: 'Enrolled Student',
-        registerNo: 'BTK2026-0428'
+        username: data.username || inputUser,
+        role: data.role || 'student',
+        fullName: data.user?.fullName || data.user?.full_name || 'Enrolled Student',
+        registerNo: data.user?.registerNo || data.user?.register_no || 'BTK2026-0428'
       };
 
       setAuthToken(studentToken);
@@ -44,39 +62,20 @@ const StudentLoginForm = () => {
         navigate('/student-dashboard');
       }, 1200);
     } catch (error) {
-      // Demo / offline fallback for testing purposes
-      if (username === 'student' || username.length >= 2) {
-        const studentToken = 'demo-student-token-' + Date.now();
-        const studentUser = {
-          username,
-          role: 'student',
-          fullName: 'Enrolled Student',
-          registerNo: 'BTK2026-0428'
-        };
+      console.error('[StudentLogin] Authentication failure:', error);
+      const errorMsg =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        'Invalid student ID/username or password.';
 
-        setAuthToken(studentToken);
-        localStorage.setItem('token', studentToken);
-        localStorage.setItem('access_token', studentToken);
-        localStorage.setItem('user_token', studentToken);
-        localStorage.setItem('user_role', 'student');
-        localStorage.setItem('user', JSON.stringify(studentUser));
-
-        Swal.fire({
-          icon: 'success',
-          title: 'Student Portal Access',
-          text: 'Logged into student dashboard.',
-          timer: 1500,
-          showConfirmButton: false
-        });
-        setTimeout(() => navigate('/student-dashboard'), 1200);
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Login Error',
-          text: error.response?.data?.message || error.message || 'Please check your registered student ID/username and password.',
-          confirmButtonColor: '#0a192f'
-        });
-      }
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Error',
+        text: errorMsg,
+        confirmButtonColor: '#0a192f'
+      });
     } finally {
       setLoading(false);
     }
@@ -113,6 +112,20 @@ const StudentLoginForm = () => {
                   <div className="mb-4">
                     <h3 className="fw-bold mb-1">Student Login</h3>
                     <p className="small text-muted mb-0">Enter your credentials to enter your account</p>
+                  </div>
+
+                  {/* Database Student Credential Helper Badge */}
+                  <div className="alert alert-info py-2 px-3 d-flex align-items-center justify-content-between mb-4 border-0 rounded-3">
+                    <div className="small">
+                      <strong>Student Login:</strong> <code>student</code> | <strong>Password:</strong> <code>student123</code>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setUsername('student'); setPassword('student123'); }}
+                      className="btn btn-sm btn-outline-primary py-1 px-2 fw-semibold"
+                    >
+                      Auto-Fill
+                    </button>
                   </div>
 
                   <form onSubmit={handleSubmit}>

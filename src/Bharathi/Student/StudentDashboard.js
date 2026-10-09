@@ -16,14 +16,30 @@ import '../Admin/AdminDashboard.css';
 const StudentDashboard = () => {
   const navigate = useNavigate();
 
-  // Student Profile
-  const [student, setStudent] = useState({
-    name: 'S. Kabilan',
-    rollNo: 'BTK2026-0428',
-    target: 'TNPSC Group IV & TNUSRB SI Police',
-    batch: 'Regular Saturday & Sunday Test Batch',
-    center: 'Erode Center',
-    phone: '+91 7338757194',
+  // Student Profile loaded dynamically from session / credentials
+  const [student, setStudent] = useState(() => {
+    try {
+      const stored = localStorage.getItem('student_user') || localStorage.getItem('user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        return {
+          name: u.fullName || u.full_name || u.name || u.username || 'Enrolled Student',
+          rollNo: u.registerNo || u.register_no || u.rollNo || 'BTK2026-0428',
+          target: u.targetExam || u.target_exam || 'TNPSC & TNUSRB Combined Batch',
+          batch: u.batch || 'Regular Weekend Batch',
+          center: u.center || 'Erode Study Center',
+          phone: u.phone || u.phoneNumber || '',
+        };
+      }
+    } catch (e) {}
+    return {
+      name: 'Enrolled Student',
+      rollNo: 'BTK2026-REG',
+      target: 'TNPSC & TNUSRB Examination Batch',
+      batch: 'Weekly Test Batch',
+      center: 'Erode Center',
+      phone: '',
+    };
   });
 
   // Task & Quiz Completion States (with subtle CSS transition check-marks)

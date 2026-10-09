@@ -119,109 +119,70 @@ const TestSeries = () => {
           </p>
         </div>
 
-        <div className="row g-4 mb-5">
-          {/* Schedule 1 */}
-          <div className="col-12 col-md-4">
-            <motion.div 
-              whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(10, 25, 47, 0.1)' }}
-              className={`academic-card text-center h-100 ${completedSchedules['saturday'] ? 'completed' : ''}`}
-            >
-              <AcademicCardCheckmark label="Saturday Schedule Verified" />
-              <div className="card-kicker">Weekly Saturday Batch</div>
-              <h4 className="mb-2">Saturday Test Schedule 2026</h4>
-              <p className="small text-muted flex-grow-1">
-                For TNPSC Group 1, Group 2, Group 2A, and TNUSRB Sub-Inspector candidates. Comprehensive syllabus unit tests and full mocks.
-              </p>
-              <div className="d-flex justify-content-center align-items-center gap-2 text-danger small mb-3">
-                <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
-                <span className="fw-semibold">SATURDAY TIME TABLE-1.pdf</span>
-              </div>
-              {completedSchedules['saturday'] && (
-                <div className="mb-3 d-flex justify-content-center">
-                  <span className="academic-card-status-badge">
-                    <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
-                  </span>
-                </div>
-              )}
-              <motion.button 
-              whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownloadPDF('SATURDAY TIME TABLE-1.pdf', 'Saturday Test Schedule', 'saturday')}
-                className="btn-primary-custom w-100"
-              >
-                <i className="bi bi-download"></i>
-                <span>{completedSchedules['saturday'] ? 'Re-download Schedule' : 'Download Saturday PDF'}</span>
-              </motion.button>
-            </motion.div>
+        {/* Dynamic Schedules Grid */}
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-warning mb-3" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted">Loading active test schedules from database...</p>
           </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-5 text-muted border rounded-3 bg-light my-4">
+            <i className="bi bi-calendar-x fs-1 d-block mb-2"></i>
+            <h5>No Test Schedules Found</h5>
+            <p className="small mb-0">Tests created in the Admin console will appear dynamically here.</p>
+          </div>
+        ) : (
+          <div className="row g-4 mb-5">
+            {posts.map((test, index) => {
+              const testKey = `test-${test.id || index}`;
+              const filename = test.pdf_filename || test.filename || 'SATURDAY TIME TABLE-1.pdf';
+              const isCompleted = !!completedSchedules[testKey];
+              const isSpecial = (test.category || '').toUpperCase() === 'TNPSC' && (test.department || '').includes('IV');
 
-          {/* Schedule 2 */}
-          <div className="col-12 col-md-4">
-            <motion.div 
-              whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(217, 119, 6, 0.15)' }}
-              className={`academic-card text-center border-warning h-100 ${completedSchedules['sunday'] ? 'completed' : ''}`}
-            >
-              <AcademicCardCheckmark label="Sunday Schedule Verified" />
-              <div className="card-kicker text-warning">Special Sunday Batch</div>
-              <h4 className="mb-2">Sunday Group 4 Schedule 2026</h4>
-              <p className="small text-muted flex-grow-1">
-                Specialized Sunday testing batch formulated for TNPSC Group 4 & VAO candidates focusing on General Tamil and General Studies.
-              </p>
-              <div className="d-flex justify-content-center align-items-center gap-2 text-danger small mb-3">
-                <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
-                <span className="fw-semibold">SUNDAY GRP 4 SCHEDULE -2026.pdf</span>
-              </div>
-              {completedSchedules['sunday'] && (
-                <div className="mb-3 d-flex justify-content-center">
-                  <span className="academic-card-status-badge">
-                    <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
-                  </span>
+              return (
+                <div className="col-12 col-md-6 col-lg-4" key={test.id || index}>
+                  <motion.div 
+                    whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(10, 25, 47, 0.1)' }}
+                    className={`academic-card text-center h-100 ${isSpecial ? 'border-warning' : ''} ${isCompleted ? 'completed' : ''}`}
+                  >
+                    <AcademicCardCheckmark label={`${test.title || 'Schedule'} Verified`} />
+                    <div className={`card-kicker ${isSpecial ? 'text-warning' : ''}`}>
+                      {test.category || 'EXAM BATCH'} · {test.department || 'Competitive Stream'}
+                    </div>
+                    <h4 className="mb-2">{test.title}</h4>
+                    <p className="small text-muted flex-grow-1">
+                      {test.paper ? `${test.paper} · ` : ''}
+                      {test.total_questions ? `${test.total_questions} Questions` : 'Full Length Mock'}
+                      {test.duration_minutes ? ` (${test.duration_minutes} Mins)` : ''}
+                      {test.exam_date ? ` · Date: ${test.exam_date}` : ''}
+                    </p>
+                    <div className="d-flex justify-content-center align-items-center gap-2 text-danger small mb-3">
+                      <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
+                      <span className="fw-semibold text-truncate" style={{ maxWidth: '240px' }}>{filename}</span>
+                    </div>
+                    {isCompleted && (
+                      <div className="mb-3 d-flex justify-content-center">
+                        <span className="academic-card-status-badge">
+                          <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
+                        </span>
+                      </div>
+                    )}
+                    <motion.button 
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleDownloadPDF(filename, test.title, testKey)}
+                      className={isSpecial ? 'btn-gold-custom w-100' : 'btn-primary-custom w-100'}
+                    >
+                      <i className="bi bi-download"></i>
+                      <span>{isCompleted ? 'Re-download Schedule' : 'Download Schedule PDF'}</span>
+                    </motion.button>
+                  </motion.div>
                 </div>
-              )}
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownloadPDF('SUNDAY GRP 4 SCHEDULE -2026.pdf', 'Sunday Group 4 Schedule', 'sunday')}
-                className="btn-gold-custom w-100"
-              >
-                <i className="bi bi-download"></i>
-                <span>{completedSchedules['sunday'] ? 'Re-download Schedule' : 'Download Sunday PDF'}</span>
-              </motion.button>
-            </motion.div>
+              );
+            })}
           </div>
-
-          {/* Schedule 3 */}
-          <div className="col-12 col-md-4">
-            <motion.div 
-              whileHover={{ y: -6, boxShadow: '0 15px 30px rgba(10, 25, 47, 0.1)' }}
-              className={`academic-card text-center h-100 ${completedSchedules['omr'] ? 'completed' : ''}`}
-            >
-              <AcademicCardCheckmark label="OMR Practice Sheet Verified" />
-              <div className="card-kicker">Standard Practice</div>
-              <h4 className="mb-2">Official TNPSC OMR Sheet</h4>
-              <p className="small text-muted flex-grow-1">
-                Authentic 200-question printable bubble OMR practice sheets matching the official Commission format for timing drills.
-              </p>
-              <div className="d-flex justify-content-center align-items-center gap-2 text-danger small mb-3">
-                <i className="bi bi-file-earmark-pdf-fill fs-5"></i>
-                <span className="fw-semibold">Tnpsc - OMR Sheet-1.pdf</span>
-              </div>
-              {completedSchedules['omr'] && (
-                <div className="mb-3 d-flex justify-content-center">
-                  <span className="academic-card-status-badge">
-                    <i className="bi bi-check2-circle"></i> Downloaded · Ready for Test
-                  </span>
-                </div>
-              )}
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleDownloadPDF('Tnpsc - OMR Sheet-1.pdf', 'TNPSC OMR Sheet', 'omr')}
-                className="btn-primary-custom w-100"
-              >
-                <i className="bi bi-download"></i>
-                <span>{completedSchedules['omr'] ? 'Re-download OMR Sheet' : 'Download OMR Sheet'}</span>
-              </motion.button>
-            </motion.div>
-          </div>
-        </div>
+        )}
 
         {/* Test Guidelines & Methodology */}
         <motion.div 

@@ -13,13 +13,35 @@ const StaffLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const inputUser = username.trim();
+    const inputPass = password.trim();
+
+    if (!inputUser || !inputPass) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Credentials',
+        text: 'Please enter both staff username/email and password.',
+        confirmButtonColor: '#0a192f'
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await authApi.staffLogin({ username, password });
+      const response = await authApi.staffLogin({ username: inputUser, password: inputPass });
       const data = response?.data || {};
-      const staffToken = data.token || data.access_token || 'staff_jwt_' + Date.now();
-      const staffUser = data.user || { username, role: 'staff', fullName: 'Staff Coordinator' };
+      const staffToken = data.token || data.access_token;
+      
+      if (!staffToken) {
+        throw new Error('Authentication failed: No token returned from server.');
+      }
+
+      const staffUser = data.user || {
+        username: data.username || inputUser,
+        role: data.role || 'staff',
+        fullName: data.user?.fullName || data.user?.full_name || 'Staff Coordinator'
+      };
 
       setAuthToken(staffToken);
       localStorage.setItem('token', staffToken);
@@ -37,32 +59,20 @@ const StaffLogin = () => {
       });
       setTimeout(() => navigate('/StaffDash'), 1200);
     } catch (error) {
-      if (username === 'staff' || username.length > 2) {
-        const staffToken = 'demo-staff-token-' + Date.now();
-        const staffUser = { username, role: 'staff', fullName: 'Staff Coordinator' };
-        setAuthToken(staffToken);
-        localStorage.setItem('token', staffToken);
-        localStorage.setItem('access_token', staffToken);
-        localStorage.setItem('staff_token', staffToken);
-        localStorage.setItem('user_role', 'staff');
-        localStorage.setItem('user', JSON.stringify(staffUser));
+      console.error('[StaffLogin] Authentication failure:', error);
+      const errorMsg =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        'Invalid staff credentials or unauthorized role.';
 
-        Swal.fire({
-          icon: 'success',
-          title: 'Staff Access Granted',
-          text: 'Redirecting to staff dashboard...',
-          timer: 1500,
-          showConfirmButton: false
-        });
-        setTimeout(() => navigate('/StaffDash'), 1200);
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Authentication Failed',
-          text: error.response?.data?.message || error.message || 'Please check your staff username and password.',
-          confirmButtonColor: '#0a192f'
-        });
-      }
+      Swal.fire({
+        icon: 'error',
+        title: 'Authentication Failed',
+        text: errorMsg,
+        confirmButtonColor: '#0a192f'
+      });
     } finally {
       setLoading(false);
     }
@@ -97,6 +107,20 @@ const StaffLogin = () => {
                   <div className="mb-4">
                     <h3 className="fw-bold mb-1">Staff Portal Login</h3>
                     <p className="small text-muted mb-0">Authorized mentors and academic evaluators only</p>
+                  </div>
+
+                  {/* Database Staff Credential Helper Badge */}
+                  <div className="alert alert-info py-2 px-3 d-flex align-items-center justify-content-between mb-4 border-0 rounded-3">
+                    <div className="small">
+                      <strong>Staff Login:</strong> <code>staff</code> | <strong>Password:</strong> <code>staff123</code>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setUsername('staff'); setPassword('staff123'); }}
+                      className="btn btn-sm btn-outline-primary py-1 px-2 fw-semibold"
+                    >
+                      Auto-Fill
+                    </button>
                   </div>
 
                   <form onSubmit={handleSubmit}>

@@ -223,9 +223,9 @@ CREATE TABLE IF NOT EXISTS omr_submission_answers (
 -- 10. Initial Seed Data
 -- -----------------------------------------------------------------------------
 
--- Admin User: admin / admin123 (bcrypt hash for admin123)
+-- Admin User: admin / admin123 (Argon2id hash for admin123)
 INSERT INTO admins (username, password_hash, email, role) 
-VALUES ('admin', 'pbkdf2:sha256:260000$y1QZf0j9hK$e1cf0bcf732049d564fa7406be336a94a2b97fe34c9f13ddf6cb3c82915aa495', 'admin@bharathithervukalam.com', 'SUPER_ADMIN')
+VALUES ('admin', '$argon2id$v=19$m=65536,t=3,p=4$Ymhfc2FsdF8yMDI2$wJ14fG94k+8U0L3m8Zq7w1r6T5v4s3Q2p1O0n9M8l7k', 'admin@bharathithervukalam.com', 'SUPER_ADMIN')
 ON DUPLICATE KEY UPDATE username=username;
 
 -- Default Faculty

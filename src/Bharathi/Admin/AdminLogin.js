@@ -13,10 +13,21 @@ const AdminLogin = () => {
 
   const handleLogin = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    setLoading(true);
+    
+    const inputUser = username.trim();
+    const inputPass = password.trim();
 
-    const inputUser = (username || 'admin').trim();
-    const inputPass = (password || 'admin123').trim();
+    if (!inputUser || !inputPass) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Credentials',
+        text: 'Please enter both administrator username/email and password.',
+        confirmButtonColor: '#0b1e42'
+      });
+      return;
+    }
+
+    setLoading(true);
 
     // 1. Purge previous non-admin session artifacts
     try {
@@ -24,26 +35,32 @@ const AdminLogin = () => {
       localStorage.removeItem('staff_token');
     } catch (err) {}
 
-    const applyAdminSession = (token, userObj) => {
-      const adminToken = token || ('admin_jwt_session_' + Date.now());
-      const adminUser = {
-        id: userObj?.id || 1,
-        username: userObj?.username || inputUser || 'admin',
-        email: userObj?.email || (inputUser.includes('@') ? inputUser : 'admin@bharathithervukalam.com'),
+    try {
+      const response = await authApi.adminLogin({ username: inputUser, password: inputPass });
+      const data = response?.data || {};
+      const token = data.token || data.access_token;
+      const userObj = data.user || {
+        id: data.user_id || 1,
+        username: data.username || inputUser,
+        email: data.email || (inputUser.includes('@') ? inputUser : 'admin@bharathithervukalam.com'),
         role: 'admin',
-        fullName: userObj?.fullName || userObj?.full_name || 'Super Administrator'
+        fullName: data.fullName || data.full_name || 'Super Administrator'
       };
 
-      setAuthToken(adminToken);
-      localStorage.setItem('token', adminToken);
-      localStorage.setItem('access_token', adminToken);
-      localStorage.setItem('admin_token', adminToken);
-      localStorage.setItem('user_token', adminToken);
+      if (!token) {
+        throw new Error('Authentication response did not return a valid session token.');
+      }
+
+      setAuthToken(token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('admin_token', token);
+      localStorage.setItem('user_token', token);
       localStorage.setItem('user_role', 'admin');
-      localStorage.setItem('user', JSON.stringify(adminUser));
+      localStorage.setItem('user', JSON.stringify(userObj));
 
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:admin_elevated', { detail: adminUser }));
+        window.dispatchEvent(new CustomEvent('auth:admin_elevated', { detail: userObj }));
       }
 
       Swal.fire({
@@ -57,23 +74,24 @@ const AdminLogin = () => {
       setTimeout(() => {
         window.location.href = '/Adm';
       }, 700);
-    };
-
-    try {
-      const response = await authApi.adminLogin({ username: inputUser, password: inputPass });
-      const data = response?.data || {};
-      const token = data.token || data.access_token;
-
-      if (token) {
-        applyAdminSession(token, data.user);
-        return;
-      }
     } catch (error) {
-      console.warn('[AdminLogin] Direct API auth notice, applying resilient clearance:', error);
-    }
+      console.error('[AdminLogin] Authentication failure:', error);
+      const errorMsg =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        'Invalid administrator credentials or unauthorized role.';
 
-    // Always succeed on the administrator login portal
-    applyAdminSession(null, { username: inputUser, role: 'admin' });
+      Swal.fire({
+        icon: 'error',
+        title: 'Authorization Denied',
+        text: errorMsg,
+        confirmButtonColor: '#0b1e42'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFillDemo = () => {
@@ -84,7 +102,10 @@ const AdminLogin = () => {
   const handleDirectAccess = () => {
     setUsername('admin');
     setPassword('admin123');
-    handleLogin({ preventDefault: () => {} });
+    setTimeout(() => {
+      const form = document.querySelector('form');
+      if (form) form.requestSubmit ? form.requestSubmit() : handleLogin();
+    }, 50);
   };
 
   return (

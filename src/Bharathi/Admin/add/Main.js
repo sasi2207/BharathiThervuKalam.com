@@ -1,37 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../../img1/Logo.png';
 import '../AdminDashboard.css';
+import { studentApi, achieversApi, coursesApi, testApi } from '../../Api/Api';
 
 export default function Main() {
+  const [statsData, setStatsData] = useState({
+    students: '...',
+    achievers: '...',
+    courses: '...',
+    tests: '...'
+  });
+
+  useEffect(() => {
+    Promise.all([
+      studentApi.getAll().catch(() => ({ data: [] })),
+      achieversApi.getAll().catch(() => ({ data: [] })),
+      coursesApi.getAll().catch(() => ({ data: [] })),
+      testApi.getAll().catch(() => ({ data: [] }))
+    ]).then(([stRes, achRes, cRes, tRes]) => {
+      const stCount = Array.isArray(stRes.data) ? stRes.data.length : (stRes.data?.totalElements || 0);
+      const achCount = Array.isArray(achRes.data) ? achRes.data.length : (achRes.data?.data?.length || 0);
+      const cCount = Array.isArray(cRes.data) ? cRes.data.length : (cRes.data?.data?.length || 0);
+      const tCount = Array.isArray(tRes.data) ? tRes.data.length : (tRes.data?.data?.length || 0);
+
+      setStatsData({
+        students: `${stCount} Active`,
+        achievers: `${achCount} Officers`,
+        courses: `${cCount} Modules`,
+        tests: `${tCount} Schedules`
+      });
+    });
+  }, []);
+
   const stats = [
     {
       label: 'Enrolled Candidates',
-      value: '2,194',
+      value: statsData.students,
       icon: 'bi-mortarboard',
       color: 'blue',
-      sub: 'Active 2026 Batch',
+      sub: 'Real-time Registered Database',
     },
     {
       label: 'Civil Service Selections',
-      value: '130+',
+      value: statsData.achievers,
       icon: 'bi-trophy',
       color: 'amber',
-      sub: 'DSP, Sub-Registrar & SI Ranks',
+      sub: 'Verified Hall of Fame',
     },
     {
       label: 'Syllabus & Course Modules',
-      value: '8 Streams',
+      value: statsData.courses,
       icon: 'bi-journal-bookmark',
       color: 'green',
-      sub: 'TNPSC & TNUSRB Programs',
+      sub: 'Published Curriculum Units',
     },
     {
       label: 'Test Series Batches',
-      value: '34 Tests',
+      value: statsData.tests,
       icon: 'bi-clipboard2-check',
       color: 'purple',
-      sub: 'Saturday & Sunday Schedules',
+      sub: 'Active Mock Timetables',
     },
   ];
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Modal, Button } from 'react-bootstrap';
 import Swal from 'sweetalert2';
 import {
+  fetchCourseList,
   getCourseList,
   updateCourseItem,
   deleteCourseItem,
@@ -18,15 +19,23 @@ export default function CourseViewTemplate({
   addRoute = '/Group-I-Add',
 }) {
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
   const [formData, setFormData] = useState({ syllabus: '', paper: '', subject: '' });
 
-  // Load from data manager
+  // Load dynamically from database
   useEffect(() => {
-    const data = getCourseList(courseKey);
-    setItems(data);
+    let active = true;
+    setLoading(true);
+    fetchCourseList(courseKey).then((data) => {
+      if (active) {
+        setItems(data);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
   }, [courseKey]);
 
   // Filter items
@@ -50,18 +59,18 @@ export default function CourseViewTemplate({
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!currentItem) return;
 
-    const updatedList = updateCourseItem(courseKey, currentItem.id, formData);
+    const updatedList = await updateCourseItem(courseKey, currentItem.id, formData);
     setItems(updatedList);
     setShowEditModal(false);
 
     Swal.fire({
       icon: 'success',
       title: 'Updated',
-      text: 'Syllabus details have been successfully updated.',
+      text: 'Syllabus details have been successfully updated in database.',
       timer: 1600,
       showConfirmButton: false,
     });
@@ -81,12 +90,12 @@ export default function CourseViewTemplate({
     });
 
     if (res.isConfirmed) {
-      const updatedList = deleteCourseItem(courseKey, id);
+      const updatedList = await deleteCourseItem(courseKey, id);
       setItems(updatedList);
       Swal.fire({
         icon: 'success',
         title: 'Deleted',
-        text: 'The syllabus has been removed from catalog.',
+        text: 'The syllabus has been removed from database catalog.',
         timer: 1500,
         showConfirmButton: false,
       });

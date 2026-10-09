@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './StaffFaculty.css';
-import { staffApi, DEFAULT_FACULTY } from '../../Api/Api';
+import { staffApi } from '../../Api/Api';
 
 const StaffFaculty = ({ staffId }) => {
   const [staffData, setStaffData] = useState([]);
@@ -15,13 +15,12 @@ const StaffFaculty = ({ staffId }) => {
     const fetchStaffData = async () => {
       try {
         const response = await staffApi.getAll();
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          setStaffData(response.data);
-        } else {
-          setStaffData(DEFAULT_FACULTY);
-        }
+        const records = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        setStaffData(records);
       } catch (err) {
-        setStaffData(DEFAULT_FACULTY);
+        console.error('Staff fetch error:', err);
+        setError('Failed to load staff records from database.');
+        setStaffData([]);
       } finally {
         setLoading(false);
       }

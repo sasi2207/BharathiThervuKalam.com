@@ -55,7 +55,7 @@ export default function CourseAddTemplate({
       date: new Date().toISOString().split('T')[0],
     };
 
-    saveCourseItem(courseKey, newItem);
+    await saveCourseItem(courseKey, newItem);
 
     // Attempt backend save via Python REST API
     const targetEndpoint = apiEndpoint || `/api/courses/${courseKey}`;
