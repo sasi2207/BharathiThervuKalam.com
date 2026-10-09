@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 
-// Resolve Base URL dynamically: Environment -> LocalStorage override -> Default
+// Resolve Base URL dynamically: Environment -> LocalStorage override (valid only) -> Default
 export const API_BASE_URL = (() => {
   if (process.env.REACT_APP_API_URL) {
     const url = process.env.REACT_APP_API_URL.trim();
@@ -14,7 +14,12 @@ export const API_BASE_URL = (() => {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('backend_api_url');
     if (custom && custom.trim()) {
-      return custom.endsWith('/') ? custom.trim() : `${custom.trim()}/`;
+      const isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      const isLocalTarget = custom.includes('localhost') || custom.includes('127.0.0.1');
+      // If deployed on Cloud / Remote domain, do not attempt to contact localhost
+      if (!(isRemote && isLocalTarget)) {
+        return custom.endsWith('/') ? custom.trim() : `${custom.trim()}/`;
+      }
     }
   }
   // Standard relative base for production & dev proxy on port 3000

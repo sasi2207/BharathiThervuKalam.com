@@ -17,7 +17,7 @@ from main import app, init_database
 if __name__ == "__main__":
     init_database()
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8081))
     print("=" * 70)
     print("  Bharathi Thervukalam - Python FastAPI Backend Starting")
     print(f"  Listening on http://{host}:{port}")

@@ -66,7 +66,12 @@ def _authenticate_and_create_token(
     user_role = (user.role or "student").lower()
     if allowed_roles:
         normalized_allowed = [r.lower() for r in allowed_roles]
-        if user_role not in normalized_allowed and "super_admin" not in user_role and "admin" not in normalized_allowed:
+        is_role_ok = (
+            user_role in normalized_allowed or
+            ("admin" in normalized_allowed and "admin" in user_role) or
+            ("super_admin" in user_role)
+        )
+        if not is_role_ok:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied. Role '{user_role}' is not authorized for this portal."

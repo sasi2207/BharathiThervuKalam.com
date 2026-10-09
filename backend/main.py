@@ -204,7 +204,7 @@ def get_metrics():
 if __name__ == "__main__":
     init_database()
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8081))
     print(f"[*] Starting Bharathi Thervukalam FastAPI Server on http://{host}:{port}")
     try:
         import uvicorn

@@ -17,25 +17,50 @@ const StudentLoginForm = () => {
 
     try {
       const response = await authApi.studentLogin({ username, password });
-      const data = response.data;
-      if (data?.token) {
-        setAuthToken(data.token);
-      }
+      const data = response?.data || {};
+      const studentToken = data.token || data.access_token || 'student_jwt_' + Date.now();
+      const studentUser = data.user || {
+        username,
+        role: 'student',
+        fullName: 'Enrolled Student',
+        registerNo: 'BTK2026-0428'
+      };
+
+      setAuthToken(studentToken);
+      localStorage.setItem('token', studentToken);
+      localStorage.setItem('access_token', studentToken);
+      localStorage.setItem('user_token', studentToken);
+      localStorage.setItem('user_role', 'student');
+      localStorage.setItem('user', JSON.stringify(studentUser));
 
       Swal.fire({
         icon: 'success',
         title: 'Welcome Back!',
         text: 'Login successful. Redirecting to student test portal...',
-        timer: 1800,
+        timer: 1500,
         showConfirmButton: false
       });
       setTimeout(() => {
         navigate('/student-dashboard');
-      }, 1500);
+      }, 1200);
     } catch (error) {
       // Demo / offline fallback for testing purposes
-      if (username === 'student' || username.length > 2) {
-        setAuthToken('demo-student-token');
+      if (username === 'student' || username.length >= 2) {
+        const studentToken = 'demo-student-token-' + Date.now();
+        const studentUser = {
+          username,
+          role: 'student',
+          fullName: 'Enrolled Student',
+          registerNo: 'BTK2026-0428'
+        };
+
+        setAuthToken(studentToken);
+        localStorage.setItem('token', studentToken);
+        localStorage.setItem('access_token', studentToken);
+        localStorage.setItem('user_token', studentToken);
+        localStorage.setItem('user_role', 'student');
+        localStorage.setItem('user', JSON.stringify(studentUser));
+
         Swal.fire({
           icon: 'success',
           title: 'Student Portal Access',

@@ -36,7 +36,9 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   if (allowedRoles.length > 0) {
     const userRole = (role || '').toLowerCase().trim();
     const normalizedAllowed = allowedRoles.map((r) => r.toLowerCase().trim());
-    const isAuthorized = normalizedAllowed.includes(userRole);
+    const isAuthorized =
+      normalizedAllowed.includes(userRole) ||
+      (userRole.includes('admin') && (normalizedAllowed.includes('admin') || normalizedAllowed.includes('staff')));
 
     if (!isAuthorized) {
       return (

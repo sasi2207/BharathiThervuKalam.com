@@ -18,7 +18,11 @@ export const BASE_URL = (() => {
   if (typeof window !== "undefined") {
     const custom = localStorage.getItem("backend_api_url");
     if (custom && custom.trim()) {
-      return custom.endsWith("/") ? custom.trim() : `${custom.trim()}/`;
+      const isRemote = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+      const isLocalTarget = custom.includes("localhost") || custom.includes("127.0.0.1");
+      if (!(isRemote && isLocalTarget)) {
+        return custom.endsWith("/") ? custom.trim() : `${custom.trim()}/`;
+      }
     }
   }
   // Standard relative base for production & dev proxy on port 3000
@@ -245,9 +249,12 @@ export const getAuthToken = () => {
 export const clearAuthToken = () => {
   try {
     localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
     localStorage.removeItem("user_token");
     localStorage.removeItem("admin_token");
     localStorage.removeItem("staff_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user");
     delete api.defaults.headers.common["Authorization"];
   } catch (e) {}
 };

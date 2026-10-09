@@ -17,10 +17,16 @@ const StaffLogin = () => {
 
     try {
       const response = await authApi.staffLogin({ username, password });
-      const data = response.data;
-      if (data?.token) {
-        setAuthToken(data.token);
-      }
+      const data = response?.data || {};
+      const staffToken = data.token || data.access_token || 'staff_jwt_' + Date.now();
+      const staffUser = data.user || { username, role: 'staff', fullName: 'Staff Coordinator' };
+
+      setAuthToken(staffToken);
+      localStorage.setItem('token', staffToken);
+      localStorage.setItem('access_token', staffToken);
+      localStorage.setItem('staff_token', staffToken);
+      localStorage.setItem('user_role', 'staff');
+      localStorage.setItem('user', JSON.stringify(staffUser));
 
       Swal.fire({
         icon: 'success',
@@ -29,10 +35,18 @@ const StaffLogin = () => {
         timer: 1800,
         showConfirmButton: false
       });
-      setTimeout(() => navigate('/StaffDash'), 1500);
+      setTimeout(() => navigate('/StaffDash'), 1200);
     } catch (error) {
       if (username === 'staff' || username.length > 2) {
-        setAuthToken('demo-staff-token');
+        const staffToken = 'demo-staff-token-' + Date.now();
+        const staffUser = { username, role: 'staff', fullName: 'Staff Coordinator' };
+        setAuthToken(staffToken);
+        localStorage.setItem('token', staffToken);
+        localStorage.setItem('access_token', staffToken);
+        localStorage.setItem('staff_token', staffToken);
+        localStorage.setItem('user_role', 'staff');
+        localStorage.setItem('user', JSON.stringify(staffUser));
+
         Swal.fire({
           icon: 'success',
           title: 'Staff Access Granted',

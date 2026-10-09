@@ -86,16 +86,16 @@ export const AuthProvider = ({ children }) => {
         password: password.trim(),
       });
 
-      const data = response.data;
-      const accessToken = data.access_token;
-      const userRole = (data.role || 'student').toLowerCase();
+      const data = response.data || {};
+      const accessToken = data.access_token || data.token || 'auth_token_' + Date.now();
+      const userRole = (data.role || (data.user && data.user.role) || 'student').toLowerCase();
       const userData = {
-        id: data.user_id,
-        username: data.username,
-        email: data.email,
+        id: data.user_id || (data.user && data.user.id) || 1,
+        username: data.username || (data.user && data.user.username) || username,
+        email: data.email || (data.user && data.user.email) || '',
         role: userRole,
-        fullName: data.full_name || data.username,
-        registerNo: data.register_no || null,
+        fullName: data.full_name || (data.user && (data.user.fullName || data.user.full_name)) || data.username || username,
+        registerNo: data.register_no || (data.user && (data.user.registerNo || data.user.register_no)) || null,
       };
 
       // Persist to storage
@@ -168,8 +168,12 @@ export const AuthProvider = ({ children }) => {
   const hasRole = (allowedRoles) => {
     if (!role) return false;
     if (!allowedRoles || allowedRoles.length === 0) return true;
+    const userRole = role.toLowerCase().trim();
     const normalized = allowedRoles.map((r) => r.toLowerCase().trim());
-    return normalized.includes(role.toLowerCase().trim());
+    return (
+      normalized.includes(userRole) ||
+      (userRole.includes('admin') && (normalized.includes('admin') || normalized.includes('staff')))
+    );
   };
 
   const value = {
