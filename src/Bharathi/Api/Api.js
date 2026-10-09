@@ -143,6 +143,12 @@ const toQueryString = (params = {}) => {
 
 // Authentication Service
 export const authApi = {
+  // Unified Auth
+  login: (credentials) => api.post("/api/auth/login", credentials),
+  getProfile: () => api.get("/api/auth/me"),
+  verifySession: () => api.get("/api/auth/verify-session"),
+  terminateOtherSessions: () => api.post("/api/auth/terminate-other-sessions"),
+
   // Student Auth
   studentLogin: (credentials) => api.post("/api/auth/student/login", credentials),
   studentRegister: (data) => api.post("/api/auth/student/register", data),
@@ -435,6 +441,8 @@ export const aboutApi = {
 // PDF Test Series Question & Highlighted Answer Extractor Service
 export const pdfApi = {
   extractQuestions: (payload) => api.post("/api/pdf/extract-questions", payload),
+  mergeQuestionsAndAnswers: (payload) => api.post("/api/pdf/merge-questions-answers", payload),
+  publishTest: (payload) => api.post("/api/pdf/publish-test", payload),
 };
 
 export default api;

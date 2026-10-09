@@ -11,6 +11,19 @@ const StaffLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reason') === 'concurrent_device') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Single-Device Session Alert',
+        html: `<strong>Security Notice:</strong> Your staff coordinator account was logged in from another device.<br/><br/>Bharathi Thervukalam enforces <strong>strict single-device concurrent session control</strong>. To access the faculty portal, please sign in again.`,
+        confirmButtonColor: '#0a192f',
+        confirmButtonText: 'I Understand'
+      });
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const inputUser = username.trim();

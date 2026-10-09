@@ -11,6 +11,19 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reason') === 'concurrent_device') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Single-Device Session Alert',
+        html: `<strong>Security Notice:</strong> Your administrative account was logged in from another device.<br/><br/>Bharathi Thervukalam enforces <strong>strict single-device concurrent session control</strong>. To access the admin console, please sign in again.`,
+        confirmButtonColor: '#0b1e42',
+        confirmButtonText: 'I Understand'
+      });
+    }
+  }, []);
+
   const handleLogin = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     

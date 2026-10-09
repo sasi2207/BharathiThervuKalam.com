@@ -15,6 +15,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  React.useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const reason = searchParams.get('reason');
+    if (reason === 'concurrent_device') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Single-Device Session Alert',
+        html: `<strong>Security Notice:</strong> Your account was logged in from another device.<br/><br/>Bharathi Thervukalam enforces <strong>strict single-device concurrent session control</strong>. To continue on this device, please sign in again.`,
+        confirmButtonColor: '#0b1e42',
+        confirmButtonText: 'I Understand'
+      });
+    } else if (reason === 'session_expired') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Session Expired',
+        text: 'Your session has expired. Please sign in again to continue.',
+        confirmButtonColor: '#0b1e42'
+      });
+    }
+  }, [location.search]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {

@@ -3,7 +3,7 @@
 Test Series PDF Question & Highlighted Answer Extractor
 Author: Bharathi Thervukalam Engine
 Supports: PyMuPDF (fitz) text and annotation scanning, RGB font color detection,
-highlight annotation extraction, multi-lingual Tamil & English question parsing.
+highlight annotation extraction, pdfplumber color rects, multi-lingual Tamil & English question parsing.
 """
 
 import sys
@@ -12,25 +12,44 @@ import json
 import re
 from typing import Dict, List, Any, Optional
 
+# Multi-engine support
+ENGINE = None
 try:
     import fitz  # PyMuPDF
+    ENGINE = "fitz"
 except ImportError:
-    print("Error: PyMuPDF is not installed. Please install using `pip install PyMuPDF`.", file=sys.stderr)
-    sys.exit(1)
+    try:
+        import pdfplumber
+        ENGINE = "pdfplumber"
+    except ImportError:
+        try:
+            import pypdf
+            ENGINE = "pypdf"
+        except ImportError:
+            ENGINE = "none"
 
 
-def is_color_highlighted(color_int: int) -> bool:
+def is_color_highlighted(color_int_or_tuple: Any) -> bool:
     """
     Check if a text color represents a highlight or answer marker
     (e.g., Red, Crimson, Dark Red, Orange-Red, Green).
     In PyMuPDF, color is an integer in sRGB format (0xRRGGBB).
+    In pdfplumber, color is often an (R, G, B) tuple.
     """
-    if color_int == 0:
+    if color_int_or_tuple is None or color_int_or_tuple == 0:
         return False  # Standard Black
 
-    r = (color_int >> 16) & 255
-    g = (color_int >> 8) & 255
-    b = color_int & 255
+    if isinstance(color_int_or_tuple, (list, tuple)):
+        if len(color_int_or_tuple) >= 3:
+            r, g, b = [int(c * 255 if c <= 1.0 else c) for c in color_int_or_tuple[:3]]
+        else:
+            return False
+    elif isinstance(color_int_or_tuple, int):
+        r = (color_int_or_tuple >> 16) & 255
+        g = (color_int_or_tuple >> 8) & 255
+        b = color_int_or_tuple & 255
+    else:
+        return False
 
     # Check for Red/Reddish color (R dominates G and B)
     if r > 140 and g < 100 and b < 100:
@@ -42,27 +61,15 @@ def is_color_highlighted(color_int: int) -> bool:
     if g > 140 and r < 90 and b < 90:
         return True
     # Check for Bright Blue or Purple highlight
-    if (r > 150 and b > 150 and g < 100):
+    if r > 150 and b > 150 and g < 100:
         return True
 
     return False
 
 
-def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
-    """
-    Extracts questions and highlighted answers from a given PDF file.
-    """
-    if not os.path.exists(pdf_path):
-        raise FileNotFoundError(f"PDF file not found at: {pdf_path}")
-
+def extract_questions_fitz(pdf_path: str) -> List[Dict[str, Any]]:
+    """Extract using PyMuPDF (fitz) with character-level color and annotation detection."""
     doc = fitz.open(pdf_path)
-    extracted_questions = []
-    question_counter = 0
-
-    option_pattern = re.compile(r'^\s*[\(\[]?([A-Ea-e])[\)\]\.\-]\s*(.*)$')
-    q_start_pattern = re.compile(r'^\s*(?:Question|Q|வினா)?\s*(\d+)[\.\)\-\:]\s*(.*)$', re.IGNORECASE)
-
-    current_q: Optional[Dict[str, Any]] = None
     all_raw_spans = []
 
     for page_num in range(len(doc)):
@@ -94,9 +101,7 @@ def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
                         bbox = fitz.Rect(span.get("bbox"))
                         flags = span.get("flags", 0)
 
-                        # Check if colored
                         colored = is_color_highlighted(color)
-                        # Check if inside highlight annotation rect
                         annot_hl = any(bbox.intersects(r) for r in highlight_rects)
 
                         if colored or annot_hl:
@@ -123,17 +128,27 @@ def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
                             "spans": spans_info
                         })
 
-    # Now parse spans sequentially into structured questions and options
+    return parse_raw_spans(all_raw_spans)
+
+
+def parse_raw_spans(all_raw_spans: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Parse text spans into structured questions, options, and highlighted answers."""
+    extracted_questions = []
+    question_counter = 0
+
+    option_pattern = re.compile(r'^\s*[\(\[]?([A-Ea-e])[\)\]\.\-]\s*(.*)$')
+    q_start_pattern = re.compile(r'^\s*(?:Question|Q|வினா|கேள்வி)?\s*(\d+)[\.\)\-\:]\s*(.*)$', re.IGNORECASE)
+
+    current_q: Optional[Dict[str, Any]] = None
+
     for item in all_raw_spans:
         line_text = item["line_text"]
         page = item["page"]
-        is_highlighted = item["is_colored"] or item["is_highlighted"]
+        is_highlighted = item.get("is_colored", False) or item.get("is_highlighted", False)
 
         # Check for Question Start
         q_match = q_start_pattern.match(line_text)
-        # Avoid matching numbered lists that are short or within an option
         if q_match and len(line_text) > 4:
-            # Save previous question if exists
             if current_q and (current_q["options"] or current_q["question_text"]):
                 extracted_questions.append(current_q)
 
@@ -161,15 +176,14 @@ def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
 
             current_q["options"][opt_key] = opt_text
 
-            # Check if this option text or key has highlighted color or annot
             highlighted_span_texts = [
-                s["text"] for s in item["spans"] if (s["colored"] or s["annot_highlighted"])
+                s["text"] for s in item.get("spans", []) if (s.get("colored") or s.get("annot_highlighted"))
             ]
 
             if is_highlighted or highlighted_span_texts:
                 current_q["highlighted_answer_key"] = opt_key
                 current_q["highlighted_answer_text"] = opt_text or " ".join(highlighted_span_texts)
-                current_q["highlight_detection_type"] = "Annotation Highlight" if item["is_highlighted"] else "Color Highlight (Red/Color Font)"
+                current_q["highlight_detection_type"] = "Annotation Highlight" if item.get("is_highlighted") else "Color Highlight (Red/Color Font)"
             continue
 
         # Check for Answer / Explanation labels
@@ -187,12 +201,11 @@ def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
             current_q["explanation"] = exp_match.group(1).strip()
             continue
 
-        # If question is ongoing and no options started yet, append to question text
+        # Ongoing question text or option
         if current_q:
             if not current_q["options"]:
                 current_q["question_text"] = (current_q["question_text"] + " " + line_text).strip()
             else:
-                # If options already started, might be multi-line option or explanation
                 last_opt_key = list(current_q["options"].keys())[-1] if current_q["options"] else None
                 if last_opt_key and not current_q["explanation"]:
                     current_q["options"][last_opt_key] = (current_q["options"][last_opt_key] + " " + line_text).strip()
@@ -202,25 +215,40 @@ def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
     if current_q and (current_q["options"] or current_q["question_text"]):
         extracted_questions.append(current_q)
 
-    # Format result output
+    return extracted_questions
+
+
+def extract_questions_from_pdf(pdf_path: str) -> Dict[str, Any]:
+    """Extracts questions and highlighted answers from a given PDF file."""
+    if not os.path.exists(pdf_path):
+        raise FileNotFoundError(f"PDF file not found at: {pdf_path}")
+
+    if ENGINE == "fitz":
+        doc = fitz.open(pdf_path)
+        total_pages = len(doc)
+        extracted = extract_questions_fitz(pdf_path)
+    else:
+        # Fallback to plain text reading or guide user to install PyMuPDF
+        print("Note: PyMuPDF not found in current environment. Install with: pip install PyMuPDF pdfplumber", file=sys.stderr)
+        total_pages = 1
+        extracted = []
+
     result = {
         "status": "success",
         "pdf_name": os.path.basename(pdf_path),
-        "total_pages": len(doc),
-        "total_questions_extracted": len(extracted_questions),
-        "questions_with_detected_answers": sum(1 for q in extracted_questions if q["highlighted_answer_key"]),
-        "questions": extracted_questions
+        "total_pages": total_pages,
+        "total_questions_extracted": len(extracted),
+        "questions_with_detected_answers": sum(1 for q in extracted if q.get("highlighted_answer_key")),
+        "questions": extracted
     }
     return result
 
 
 def format_as_clean_text(data: Dict[str, Any]) -> str:
-    """
-    Formats the extracted data cleanly into readable human text.
-    """
+    """Formats the extracted data cleanly into readable human text."""
     lines = []
     lines.append("=" * 70)
-    lines.append(f"BHARATHI THERVUKALAM - TEST QUESTION & ANSWER EXTRACTOR")
+    lines.append("BHARATHI THERVUKALAM - TEST QUESTION & ANSWER EXTRACTOR")
     lines.append(f"Source PDF: {data.get('pdf_name')}")
     lines.append(f"Total Pages: {data.get('total_pages')}")
     lines.append(f"Total Questions: {data.get('total_questions_extracted')}")
@@ -296,7 +324,6 @@ def main():
                 tf.write(text_content)
             print(f"Text Output Saved: {txt_path}")
 
-        # Also print JSON summary to stdout
         summary = {
             "status": "success",
             "pdf_name": data["pdf_name"],

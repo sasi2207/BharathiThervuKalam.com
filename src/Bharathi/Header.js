@@ -251,6 +251,16 @@ export default function Header() {
                 Test Series
               </Link>
 
+              {/* PDF Extractor */}
+              <Link 
+                to="/pdf-extractor" 
+                onClick={closeAllMenus} 
+                className={`nav-link-custom ${isActive('/pdf-extractor') ? 'active' : ''}`}
+              >
+                <span>PDF Extractor</span>
+                <span className="badge bg-danger text-white ms-1 py-0 px-1" style={{ fontSize: '0.62rem' }}>AI</span>
+              </Link>
+
               {/* Student Portal & OMR */}
               <Link 
                 to="/student-dashboard" 
@@ -530,6 +540,10 @@ export default function Header() {
 
                 <Link to="/student-dashboard" onClick={closeAllMenus} className="nav-link-custom p-2 text-warning fw-bold">
                   <i className="bi bi-mortarboard-fill me-2 text-warning"></i>Student Dashboard & OMR
+                </Link>
+
+                <Link to="/pdf-extractor" onClick={closeAllMenus} className="nav-link-custom p-2 text-danger fw-bold">
+                  <i className="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>PDF Question Extractor (Red Font / Highlights)
                 </Link>
 
                 <Link to="/Test-Series" onClick={closeAllMenus} className="nav-link-custom p-2">

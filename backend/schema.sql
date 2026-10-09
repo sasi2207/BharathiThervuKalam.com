@@ -7,7 +7,30 @@ CREATE DATABASE IF NOT EXISTS techsasi_bharathi CHARACTER SET utf8mb4 COLLATE ut
 USE techsasi_bharathi;
 
 -- -----------------------------------------------------------------------------
--- 1. Admins Table
+-- 1. Unified Users & Authentication Table (Concurrent Session Control)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    hashed_password VARCHAR(255) NOT NULL,
+    role VARCHAR(30) NOT NULL DEFAULT 'student',
+    full_name VARCHAR(150) DEFAULT NULL,
+    register_no VARCHAR(50) DEFAULT NULL UNIQUE,
+    phone_number VARCHAR(30) DEFAULT NULL,
+    active_session_id VARCHAR(100) DEFAULT NULL,
+    session_version INT DEFAULT 1,
+    last_login_at TIMESTAMP NULL DEFAULT NULL,
+    last_device_info VARCHAR(255) DEFAULT NULL,
+    last_ip_address VARCHAR(50) DEFAULT NULL,
+    status VARCHAR(30) DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_session (id, active_session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- -----------------------------------------------------------------------------
+-- 1.1 Admins Table
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -15,6 +38,10 @@ CREATE TABLE IF NOT EXISTS admins (
     password_hash VARCHAR(255) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     role VARCHAR(50) DEFAULT 'SUPER_ADMIN',
+    active_session_id VARCHAR(100) DEFAULT NULL,
+    session_version INT DEFAULT 1,
+    last_login_at TIMESTAMP NULL DEFAULT NULL,
+    last_device_info VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -30,6 +57,10 @@ CREATE TABLE IF NOT EXISTS staff (
     email VARCHAR(150) NOT NULL UNIQUE,
     phone VARCHAR(30) DEFAULT NULL,
     role VARCHAR(50) DEFAULT 'INSTRUCTOR',
+    active_session_id VARCHAR(100) DEFAULT NULL,
+    session_version INT DEFAULT 1,
+    last_login_at TIMESTAMP NULL DEFAULT NULL,
+    last_device_info VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -77,6 +108,10 @@ CREATE TABLE IF NOT EXISTS students (
     pstm_twelfth TINYINT(1) DEFAULT 0,
     pstm_ug TINYINT(1) DEFAULT 0,
     pstm_pg TINYINT(1) DEFAULT 0,
+    active_session_id VARCHAR(100) DEFAULT NULL,
+    session_version INT DEFAULT 1,
+    last_login_at TIMESTAMP NULL DEFAULT NULL,
+    last_device_info VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_reg_no (register_no),

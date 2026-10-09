@@ -98,12 +98,23 @@ def _authenticate_and_create_token(
                 detail=f"Access denied. Role '{user_role}' is not authorized for this portal."
             )
 
+    # Track active session identifier in database for single-device enforcement
+    import uuid
+    from datetime import datetime
+    new_session_id = f"sess_{uuid.uuid4().hex[:16]}"
+    user.active_session_id = new_session_id
+    user.session_version = (user.session_version or 0) + 1
+    user.last_login_at = datetime.utcnow()
+    db.commit()
+
     token = create_access_token({
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "role": user_role,
-        "full_name": user.full_name or user.username
+        "full_name": user.full_name or user.username,
+        "session_id": new_session_id,
+        "session_version": user.session_version
     })
 
     return {
@@ -117,6 +128,8 @@ def _authenticate_and_create_token(
         "user_id": user.id,
         "username": user.username,
         "email": user.email,
+        "active_session_id": new_session_id,
+        "session_version": user.session_version,
         "user": {
             "id": user.id,
             "username": user.username,
@@ -124,7 +137,9 @@ def _authenticate_and_create_token(
             "role": user_role,
             "full_name": user.full_name or user.username,
             "register_no": user.register_no,
-            "phone_number": user.phone_number
+            "phone_number": user.phone_number,
+            "active_session_id": new_session_id,
+            "session_version": user.session_version
         }
     }
 
@@ -389,7 +404,7 @@ async def admin_forgot_password(request: Request, db: Session = Depends(get_db))
     }
 
 # =============================================================================
-# 5. CURRENT USER (/me)
+# 5. CURRENT USER & SESSION INTEGRITY (/me, /verify-session)
 # =============================================================================
 
 @router.get("/me")
@@ -403,5 +418,56 @@ def get_current_user_profile(current_user: User = Depends(get_current_user)):
         "role": current_user.role,
         "full_name": current_user.full_name,
         "register_no": current_user.register_no,
-        "phone_number": current_user.phone_number
+        "phone_number": current_user.phone_number,
+        "active_session_id": current_user.active_session_id,
+        "session_version": current_user.session_version or 1,
+        "last_login_at": current_user.last_login_at.isoformat() if current_user.last_login_at else None,
+        "last_device_info": current_user.last_device_info
     }
+
+@router.get("/verify-session")
+def verify_session(current_user: User = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="No active session found.")
+    return {
+        "valid": True,
+        "status": "active",
+        "user_id": current_user.id,
+        "username": current_user.username,
+        "role": current_user.role,
+        "active_session_id": current_user.active_session_id,
+        "session_version": current_user.session_version or 1,
+        "last_device_info": current_user.last_device_info,
+        "last_login_at": current_user.last_login_at.isoformat() if current_user.last_login_at else None
+    }
+
+@router.post("/terminate-other-sessions")
+def terminate_other_sessions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    import uuid
+    from datetime import datetime
+    new_session_id = f"sess_{uuid.uuid4().hex[:16]}"
+    current_user.active_session_id = new_session_id
+    current_user.session_version = (current_user.session_version or 0) + 1
+    current_user.last_login_at = datetime.utcnow()
+    db.commit()
+
+    new_token = create_access_token({
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role,
+        "full_name": current_user.full_name or current_user.username,
+        "session_id": new_session_id,
+        "session_version": current_user.session_version
+    })
+
+    return {
+        "status": "success",
+        "message": "All other sessions have been terminated. This device is now the sole active session.",
+        "active_session_id": new_session_id,
+        "session_version": current_user.session_version,
+        "new_token": new_token
+    }
+

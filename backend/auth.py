@@ -209,6 +209,7 @@ def get_current_user(
 
     user_id = payload.get("id") or payload.get("sub") or payload.get("user_id")
     username = payload.get("username")
+    token_session_id = payload.get("session_id") or payload.get("active_session_id")
 
     query = db.query(User)
     if user_id:
@@ -217,6 +218,15 @@ def get_current_user(
         user = query.filter(User.username == username).first()
     else:
         user = None
+
+    if user and token_session_id and user.active_session_id:
+        # Enforce single active device session: verify token session matches current database session
+        if token_session_id != user.active_session_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="SESSION_EXPIRED_ANOTHER_DEVICE",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     if not user:
         # Create user representation from token if not in DB

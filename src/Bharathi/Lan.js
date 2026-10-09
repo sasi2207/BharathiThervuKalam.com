@@ -23,6 +23,7 @@ import TestSeries from './TestSeries';
 import Achivement from './Achivement';
 import Affairs from './Learn/Affairs';
 import RazorpayPayment from './Payment/Payment';
+import PdfQuestionExtractor from './Test/PdfQuestionExtractor';
 
 // Police Courses
 import RecruitmentPage from './Course/TNUSRB/SITechnical';
@@ -140,6 +141,8 @@ function GoogleTranslate() {
           <Route path="/Group-2A" element={<PublicLayout><Group_2A /></PublicLayout>} />
           <Route path="/Group4" element={<PublicLayout><Group4 /></PublicLayout>} />
           <Route path="/Test-Series" element={<PublicLayout><TestSeries /></PublicLayout>} />
+          <Route path="/pdf-extractor" element={<PublicLayout><PdfQuestionExtractor /></PublicLayout>} />
+          <Route path="/extract-questions" element={<PublicLayout><PdfQuestionExtractor /></PublicLayout>} />
           <Route path="/About" element={<PublicLayout><About /></PublicLayout>} />
           <Route path="/WhyAbout" element={<PublicLayout><WhyAbout /></PublicLayout>} />
           <Route path="/Faculty" element={<PublicLayout><Faculty /></PublicLayout>} />

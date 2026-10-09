@@ -406,24 +406,62 @@ const TestForm = () => {
                         </div>
                       </div>
 
-                      {/* Quick Batch Paste Key */}
-                      <div className="mb-3 p-2 bg-light border rounded">
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                          <span className="small fw-bold text-dark">Quick Batch Key Importer:</span>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-link p-0 text-decoration-none"
-                            onClick={() => {
-                              const keys = ['A', 'B', 'C', 'D'];
-                              const auto = {};
-                              for (let i = 1; i <= omrQuestionCount; i++) {
-                                auto[i] = keys[(i - 1) % 4];
-                              }
-                              setKeyMap(auto);
-                            }}
-                          >
-                            Auto-Fill Alternate ABCD
-                          </button>
+                      {/* Quick Batch Paste Key & File Upload */}
+                      <div className="mb-3 p-3 bg-light border rounded">
+                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                          <span className="small fw-bold text-dark">
+                            <i className="bi bi-file-earmark-check text-success me-1"></i> Upload Answer Key File or Paste Keys:
+                          </span>
+                          <div className="d-flex gap-2">
+                            <label className="btn btn-sm btn-outline-success p-1 px-2 mb-0" style={{ cursor: 'pointer' }}>
+                              <i className="bi bi-upload me-1"></i> Upload Key File (.txt / .csv / .pdf)
+                              <input
+                                type="file"
+                                accept=".txt,.csv,.json,.pdf"
+                                className="d-none"
+                                onChange={async (e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    const fileObj = e.target.files[0];
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      const text = event.target.result;
+                                      const parsed = parseAnswerKeyString(text, omrQuestionCount);
+                                      if (Object.keys(parsed).length > 0) {
+                                        setKeyMap((prev) => ({ ...prev, ...parsed }));
+                                        Swal.fire({
+                                          icon: 'success',
+                                          title: 'Answer Key Uploaded',
+                                          text: `Parsed ${Object.keys(parsed).length} keys from ${fileObj.name}.`,
+                                          timer: 1500,
+                                          showConfirmButton: false
+                                        });
+                                      } else {
+                                        Swal.fire('Info', 'Uploaded file parsed. Please verify answer bubbles.', 'info');
+                                      }
+                                    };
+                                    reader.readAsText(fileObj);
+                                  }
+                                }}
+                              />
+                            </label>
+                            <Link to="/pdf-extractor" className="btn btn-sm btn-outline-primary p-1 px-2 text-decoration-none">
+                              <i className="bi bi-magic me-1"></i> PDF Question & Answer Extractor
+                            </Link>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-link p-0 text-decoration-none"
+                              onClick={() => {
+                                const keys = ['A', 'B', 'C', 'D'];
+                                const auto = {};
+                                for (let i = 1; i <= omrQuestionCount; i++) {
+                                  auto[i] = keys[(i - 1) % 4];
+                                }
+                                setKeyMap(auto);
+                              }}
+                            >
+                              Auto-Fill ABCD
+                            </button>
+                          </div>
                         </div>
                         <div className="input-group">
                           <input

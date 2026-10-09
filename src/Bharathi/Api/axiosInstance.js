@@ -78,7 +78,13 @@ axiosInstance.interceptors.response.use(
     const isLoginEndpoint = requestUrl.includes('/api/auth/login') || requestUrl.includes('login');
 
     if (status === 401 && !isLoginEndpoint) {
-      console.warn('[Security Guard] 401 Unauthorized detected. Purging authentication credentials.');
+      const errData = error.response?.data || {};
+      const isConcurrentDevice =
+        errData.code === 'CONCURRENT_SESSION_TERMINATED' ||
+        errData.error === 'SESSION_EXPIRED_ANOTHER_DEVICE' ||
+        (typeof errData.detail === 'string' && errData.detail.includes('ANOTHER_DEVICE'));
+
+      console.warn('[Security Guard] 401 Unauthorized detected.', isConcurrentDevice ? 'Another device logged in.' : 'Session expired.');
 
       // Clear all authentication artifacts
       try {
@@ -93,12 +99,25 @@ axiosInstance.interceptors.response.use(
 
       // Trigger custom event so AuthContext updates state instantly
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:unauthorized', { detail: { url: requestUrl } }));
+        window.dispatchEvent(
+          new CustomEvent('auth:unauthorized', {
+            detail: {
+              url: requestUrl,
+              concurrentDevice: isConcurrentDevice,
+              message:
+                errData.message ||
+                (isConcurrentDevice
+                  ? 'Your account was logged in from another device. For security, only one active device session is permitted at a time.'
+                  : 'Your session has expired. Please sign in again.')
+            }
+          })
+        );
 
         // Redirect to login if not already on an auth page
         const currentPath = window.location.pathname;
         if (!['/login', '/Student-Login', '/Admin-Login', '/Staff-Login'].includes(currentPath)) {
-          window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}&reason=session_expired`;
+          const reasonParam = isConcurrentDevice ? 'concurrent_device' : 'session_expired';
+          window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}&reason=${reasonParam}`;
         }
       }
     } else if (status === 403) {

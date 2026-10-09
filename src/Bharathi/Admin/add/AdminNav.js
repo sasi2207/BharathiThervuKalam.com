@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { clearAuthToken } from '../../Api/Api';
+import { clearAuthToken, authApi } from '../../Api/Api';
 import Logo from '../../img1/Logo.png';
 import '../AdminDashboard.css';
 
@@ -11,6 +11,25 @@ const AdminNav = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path;
+
+  // Single active device session integrity check
+  React.useEffect(() => {
+    const checkAdminSession = async () => {
+      try {
+        await authApi.verifySession();
+      } catch (err) {
+        // Automatically handled by axios response interceptor
+      }
+    };
+    checkAdminSession();
+    const handleFocus = () => checkAdminSession();
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(checkAdminSession, 30000);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleLogout = async () => {
     setMobileOpen(false);

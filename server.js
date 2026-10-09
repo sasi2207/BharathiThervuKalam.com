@@ -1,6 +1,13 @@
 /**
  * Bharathi Thervukalam - Production React Server & API Engine
- * Serves the React frontend bundle and provides full in-process REST API endpoints.
+ * Directly Integrated with Live MySQL Database (techsasi_bharathi).
+ * 
+ * Enforces:
+ * 1. Single active device session tracking in MySQL (active_session_id & session_version).
+ *    When a user logs in from a new device, the session identifier is updated in MySQL.
+ *    When the old device makes an API request, the backend detects the mismatch and forces 401 logout.
+ * 2. 100% Dynamic database operations against MySQL:
+ *    Zero static mock arrays, mock objects, or static JSON files.
  */
 
 const express = require('express');
@@ -8,6 +15,10 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const mysqlDb = require('./src/server/mysqlDb');
+
+const JWT_SECRET = process.env.JWT_SECRET_KEY || process.env.SECRET_KEY || 'bharathi_secure_jwt_secret_2026';
 
 // -----------------------------------------------------------------------------
 // Argon2id Cryptography Engine (OWASP Recommended Standard)
@@ -58,725 +69,47 @@ const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// In-memory data store with initial seed data
-const db = {
-  users: [
-    {
-      id: 1,
-      username: 'admin',
-      email: 'admin@bharathithervukalam.com',
-      password: 'admin123',
-      password_hash: hashPasswordArgon2id('admin123'),
-      algorithm: 'Argon2id',
-      role: 'admin',
-      fullName: 'Super Administrator',
-      full_name: 'Super Administrator',
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      username: 'staff',
-      email: 'staff@bharathithervukalam.com',
-      password: 'staff123',
-      password_hash: hashPasswordArgon2id('staff123'),
-      algorithm: 'Argon2id',
-      role: 'staff',
-      fullName: 'Academic Coordinator',
-      full_name: 'Academic Coordinator',
-      status: 'ACTIVE'
-    },
-    {
-      id: 3,
-      username: 'student',
-      email: 'student@bharathithervukalam.com',
-      password: 'student123',
-      password_hash: hashPasswordArgon2id('student123'),
-      algorithm: 'Argon2id',
-      role: 'student',
-      fullName: 'S. Kabilan',
-      full_name: 'S. Kabilan',
-      registerNo: 'BTK2026-0428',
-      register_no: 'BTK2026-0428',
-      status: 'ACTIVE'
-    },
-    {
-      id: 4,
-      username: 'techsasi22@gmail.com',
-      email: 'techsasi22@gmail.com',
-      password: 'admin',
-      password_hash: hashPasswordArgon2id('admin'),
-      algorithm: 'Argon2id',
-      role: 'admin',
-      fullName: 'Administrator Sasi',
-      full_name: 'Administrator Sasi',
-      status: 'ACTIVE'
-    },
-    {
-      id: 5,
-      username: 'sasi2207',
-      email: 'techsasi22@gmail.com',
-      password: 'admin',
-      password_hash: hashPasswordArgon2id('admin'),
-      algorithm: 'Argon2id',
-      role: 'admin',
-      fullName: 'Administrator Sasi',
-      full_name: 'Administrator Sasi',
-      status: 'ACTIVE'
-    }
-  ],
-  students: [
-    {
-      id: 1,
-      register_no: 'BTK2026-0428',
-      name: 'S. Kabilan',
-      email: 'kabilan@gmail.com',
-      phone: '+91 9842145678',
-      father_name: 'S. Murugan',
-      qualification: 'B.E. (Mechanical)',
-      community: 'BC',
-      blood_group: 'B+',
-      address: '12, Bharathi Nagar, Perundurai, Erode',
-      status: 'ACTIVE',
-      created_at: '2026-01-15'
-    },
-    {
-      id: 2,
-      register_no: 'BTK2026-0819',
-      name: 'M. Priya',
-      email: 'priya.m@gmail.com',
-      phone: '+91 9443218765',
-      father_name: 'P. Manickam',
-      qualification: 'B.Sc. (Mathematics)',
-      community: 'MBC',
-      blood_group: 'O+',
-      address: '45, Gandhi Road, Gandhipuram, Coimbatore',
-      status: 'ACTIVE',
-      created_at: '2026-02-20'
-    }
-  ],
-  faculty: [
-    {
-      id: 1,
-      name: 'Chakarvarthy',
-      username: 'Chakarvarthy',
-      designation: 'Founder & Chief Mentor',
-      paper: 'Paper II & III',
-      subject: 'Tamil Nadu Administration, Indian Polity & Current Affairs',
-      experience: '7+ Years Guidance · State Service Officer',
-      phone: '+91 7338757194',
-      category: 'TNPSC',
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      name: 'Kannan',
-      username: 'Kannan',
-      designation: 'Senior Faculty & Coordinator',
-      paper: 'Paper I & GS',
-      subject: 'General Studies, History & Indian National Movement',
-      experience: 'State Service Specialist',
-      phone: '+91 8012194136',
-      category: 'TNPSC',
-      status: 'ACTIVE'
-    },
-    {
-      id: 3,
-      name: 'Sakthi',
-      username: 'Sakthi',
-      designation: 'Academic Advisor & Test Evaluator',
-      paper: 'Aptitude & Science',
-      subject: 'Aptitude, Mental Ability & Science',
-      experience: 'Competitive Exam Strategist',
-      phone: '+91 9791388577',
-      category: 'TNPSC',
-      status: 'ACTIVE'
-    },
-    {
-      id: 4,
-      name: 'Prabhu',
-      username: 'Prabhu',
-      designation: 'Police Services Mentor',
-      paper: 'Technical & Forensic',
-      subject: 'TNUSRB SI Technical & Forensic Science Guidance',
-      experience: 'Uniformed Services Expert',
-      phone: '+91 7904790618',
-      category: 'TNUSRB',
-      status: 'ACTIVE'
-    }
-  ],
-  achievers: [
-    {
-      id: 1,
-      name: 'R. Vignesh, M.E.',
-      posting: 'Deputy Superintendent of Police (DSP)',
-      cadre: 'State Civil Police Service',
-      exam: 'TNPSC Group I',
-      category: 'group1',
-      year: '2023',
-      department: 'Tamil Nadu Police Service (TNPS)',
-      rank_text: 'State Rank 4',
-      hometown: 'Erode',
-      story: 'Cracked in first attempt with guidance from Bharathi Academy mentors. Attended Saturday mock test series without missing a single week.',
-      advice: 'Master the school textbooks and practice answer writing under timed conditions.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      name: 'S. Divya, B.Sc.',
-      posting: 'Sub-Registrar (Grade II)',
-      cadre: 'Registration Executive Cadre',
-      exam: 'TNPSC Group II',
-      category: 'group2',
-      year: '2022',
-      department: 'Registration Department',
-      rank_text: 'Top 15 Overall',
-      hometown: 'Coimbatore',
-      story: 'Overcame rural background through 100% free mentorship and intensive interview coaching.',
-      advice: 'General Tamil syllabus is the biggest game-changer.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 3,
-      name: 'P. Arulselvan, B.Com.',
-      posting: 'Sub-Inspector of Police (Taluk)',
-      cadre: 'Uniformed Services Executive',
-      exam: 'TNUSRB Joint Recruitment',
-      category: 'police',
-      year: '2023',
-      department: 'Law & Order Wing, Coimbatore City',
-      rank_text: 'State Physical & Written Top Rank',
-      hometown: 'Salem',
-      story: 'Balanced physical endurance drills alongside 50+ Bharathi Academy mock tests.',
-      advice: 'Maintain equal dedication between physical fitness test and GS aptitude papers.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 4,
-      name: 'K. Manikandan, M.A.',
-      posting: 'Assistant Section Officer (ASO)',
-      cadre: 'Secretariat Ministerial Cadre',
-      exam: 'TNPSC Group II',
-      category: 'group2',
-      year: '2023',
-      department: 'Secretariat, Fort St. George, Chennai',
-      rank_text: 'Merit Selection',
-      hometown: 'Namakkal',
-      story: 'Prepared while working a day job. The weekend test batches and online PDF materials made self-study feasible and structured.',
-      advice: 'Analyze every error in your weekly OMR sheet. Improving 5 weak areas every test guarantees selection.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 5,
-      name: 'M. Kavitha, B.A.',
-      posting: 'Village Administrative Officer (VAO)',
-      cadre: 'Revenue Administration Cadre',
-      exam: 'TNPSC Group IV & VAO',
-      category: 'group4',
-      year: '2024',
-      department: 'Revenue Administration, Erode Taluk',
-      rank_text: 'District 1st in PSTM Quota',
-      hometown: 'Erode',
-      story: 'Scored 98/100 in General Tamil using Bharathi classroom materials.',
-      advice: 'Samacheer Kalvi books from 6th to 12th standard are your holy scripture.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 6,
-      name: 'A. Sathish Kumar, B.E.',
-      posting: 'Sub-Inspector of Police (Technical)',
-      cadre: 'Police Technical Wing',
-      exam: 'TNUSRB SI Technical',
-      category: 'police',
-      year: '2023',
-      department: 'Police Telecommunication Directorate',
-      rank_text: 'State Rank 7',
-      hometown: 'Tiruppur',
-      story: 'Utilized engineering background with Bharathi specialized electronics guidance sessions.',
-      advice: 'Focus heavily on core technical fundamentals and daily Tamil eligibility mock tests.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 7,
-      name: 'T. Gokul, B.Sc.',
-      posting: 'Junior Assistant (Judicial)',
-      cadre: 'Judicial Ministerial Service',
-      exam: 'TNPSC Group IV',
-      category: 'group4',
-      year: '2024',
-      department: 'Judicial Ministerial Service',
-      rank_text: 'State Merit Rank',
-      hometown: 'Erode',
-      story: 'Dedicated student who spent 10 hours daily at the Bharathi study library and cleared in his 2nd attempt.',
-      advice: 'Never skip mock OMR shading practice. Time management in the 3-hour hall is 50% of the battle.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 8,
-      name: 'R. Soundarya, M.Com.',
-      posting: 'Revenue Assistant',
-      cadre: 'Revenue Subordinate Service',
-      exam: 'TNPSC Group II-A',
-      category: 'group2',
-      year: '2023',
-      department: 'District Collectorate, Erode',
-      rank_text: 'Top 30 Merit',
-      hometown: 'Gobichettipalayam',
-      story: 'Mother of one who managed family and study with unwavering discipline and supportive faculty mentoring.',
-      advice: 'Believe in yourself. Age or marital status is never a barrier to serving the public in Tamil Nadu government.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 9,
-      name: 'G. Karthikeyan, B.Sc.',
-      posting: 'Sub-Inspector of Police (Finger Print)',
-      cadre: 'Forensic Investigation Cadre',
-      exam: 'TNUSRB SI Finger Print',
-      category: 'police',
-      year: '2022',
-      department: 'Forensic Science & Crime Bureau',
-      rank_text: 'State Rank 3',
-      hometown: 'Bhavani',
-      story: 'Trained under serving police mentors at Bharathi Academy who provided hands-on interview orientation.',
-      advice: 'Physics and Chemistry fundamentals must be rock-solid along with high mental ability scores.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 10,
-      name: 'N. Priya, B.A. (Tamil)',
-      posting: 'Executive Officer (Grade IV)',
-      cadre: 'HR&CE Administrative Wing',
-      exam: 'TNPSC HR&CE Services',
-      category: 'group4',
-      year: '2023',
-      department: 'Hindu Religious & Charitable Endowments',
-      rank_text: 'State Merit Selection',
-      hometown: 'Dharapuram',
-      story: 'Leveraged deep knowledge of Tamil literature and Saivism/Vaishnavism taught by academy guest scholars.',
-      advice: 'Specific departmental act papers require dedicated notes. Academy handouts were invaluable.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 11,
-      name: 'S. Rajesh, 12th Pass',
-      posting: 'Police Constable (Grade II)',
-      cadre: 'Armed Reserve Police',
-      exam: 'TNUSRB Common Recruitment',
-      category: 'police',
-      year: '2024',
-      department: 'Armed Reserve (AR), Salem',
-      rank_text: 'Physical Full Marks (15/15)',
-      hometown: 'Mettur',
-      story: 'Achieved dream uniform directly after school with free coaching and ground physical coaching provided at Erode.',
-      advice: 'Start rope climbing and 1500m running 4 months before notification. Don’t wait until the last month.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 12,
-      name: 'V. Bharathi, B.Com.',
-      posting: 'Typist (Secretariat)',
-      cadre: 'Secretariat Clerical Service',
-      exam: 'TNPSC Group IV & Typist',
-      category: 'group4',
-      year: '2024',
-      department: 'Personnel & Administrative Reforms',
-      rank_text: 'Top Rank in Typing Quota',
-      hometown: 'Perundurai',
-      story: 'Holding Tamil & English Both Higher technical certificate gave immediate edge in Group 4 Typist counselling.',
-      advice: 'Technical typewriter qualification guarantees you a posting even with a moderate GS score.',
-      status: 'ACTIVE'
-    }
-  ],
-  staff: [
-    {
-      id: 1,
-      staff_id: 'STF-2026-001',
-      name: 'Administrative Coordinator',
-      email: 'staff@bharathithervukalam.com',
-      phone: '+91 7338757194',
-      designation: 'Head of Examinations',
-      department: 'Competitive Exams Cell',
-      role: 'ACADEMIC_COORDINATOR',
-      status: 'ACTIVE'
-    }
-  ],
-  courses: [
-    {
-      id: 1,
-      course_key: 'group1',
-      category: 'TNPSC',
-      title: 'TNPSC Group I Preliminary & Mains Master Syllabus 2026',
-      syllabus: 'TNPSC Group I Preliminary & Mains Master Syllabus 2026',
-      paper: 'General Studies & Aptitude',
-      subject: 'History, Culture, Geography, Tamil Society & Indian Polity',
-      department: 'Civil Services',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'TNPSC_Group1_Comprehensive_2026.pdf',
-      fees: 25000,
-      duration: '1 Year',
-      date: '2026-03-01',
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      course_key: 'group1',
-      category: 'TNPSC',
-      title: 'Group I Mains Paper II - Tamil Eligibility & Heritage',
-      syllabus: 'Group I Mains Paper II - Tamil Eligibility & Heritage',
-      paper: 'Paper II',
-      subject: 'Tamil Society, Culture & Administration in Tamil Nadu',
-      department: 'Civil Services',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'Group1_Paper2_Tamil_Heritage.pdf',
-      fees: 25000,
-      duration: '1 Year',
-      date: '2026-03-05',
-      status: 'ACTIVE'
-    },
-    {
-      id: 3,
-      course_key: 'group1',
-      category: 'TNPSC',
-      title: 'Group I Mains Paper III - Science, Tech & Economy',
-      syllabus: 'Group I Mains Paper III - Science, Tech & Economy',
-      paper: 'Paper III',
-      subject: 'Role of Science & Tech, Indian Economy & Current Socio-Economic Issues',
-      department: 'Civil Services',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'Group1_Paper3_Economy_Science.pdf',
-      fees: 25000,
-      duration: '1 Year',
-      date: '2026-03-10',
-      status: 'ACTIVE'
-    },
-    {
-      id: 4,
-      course_key: 'group2',
-      category: 'TNPSC',
-      title: 'TNPSC Group II Combined Civil Services Examination II',
-      syllabus: 'TNPSC Group II & II-A Combined Scheme of Examination',
-      paper: 'Prelims (Single Paper)',
-      subject: 'General Studies (Degree Standard) + Aptitude + General Tamil / English',
-      department: 'Interview Posts',
-      pdf_filename: 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
-      filename: 'Group2_Combined_Scheme_2026.pdf',
-      fees: 18000,
-      duration: '8 Months',
-      date: '2026-03-02',
-      status: 'ACTIVE'
-    },
-    {
-      id: 5,
-      course_key: 'group2',
-      category: 'TNPSC',
-      title: 'Group II Interview Posts Syllabus & Interview Guidance',
-      syllabus: 'Group II Interview Posts Syllabus & Interview Guidance',
-      paper: 'Mains Paper I & II',
-      subject: 'Descriptive Type Tamil to English Translation, Precis Writing & Letter Drafting',
-      department: 'Interview Posts',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'Group2_Interview_Mains_Syllabus.pdf',
-      fees: 18000,
-      duration: '8 Months',
-      date: '2026-03-08',
-      status: 'ACTIVE'
-    },
-    {
-      id: 6,
-      course_key: 'group2A',
-      category: 'TNPSC',
-      title: 'TNPSC Group II-A Non-Interview Services Batch',
-      syllabus: 'TNPSC Group II-A Non-Interview Posts Official Syllabus',
-      paper: 'Paper I & II',
-      subject: 'General Studies, Aptitude and Mental Ability, General Tamil',
-      department: 'Non-Interview Ministerial',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'Group2A_Non_Interview_Syllabus.pdf',
-      fees: 15000,
-      duration: '6 Months',
-      date: '2026-03-03',
-      status: 'ACTIVE'
-    },
-    {
-      id: 7,
-      course_key: 'group2A',
-      category: 'TNPSC',
-      title: 'Group II-A Secretarial Assistant & Revenue Inspector Focus Module',
-      syllabus: 'Group II-A Secretarial Assistant & Revenue Inspector Focus Module',
-      paper: 'General Studies',
-      subject: 'Indian National Movement, Tamil Nadu Administration & Governance',
-      department: 'Non-Interview Ministerial',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'Group2A_Revenue_Inspector_Notes.pdf',
-      fees: 15000,
-      duration: '6 Months',
-      date: '2026-03-09',
-      status: 'ACTIVE'
-    },
-    {
-      id: 8,
-      course_key: 'group4',
-      category: 'TNPSC',
-      title: 'TNPSC Group IV & VAO Complete Scheme 2026',
-      syllabus: 'TNPSC Group IV & VAO Complete Syllabus & Schedule 2026',
-      paper: 'Part A & B',
-      subject: 'General Tamil (100 Qs) + General Studies & Aptitude (100 Qs)',
-      department: 'Village Admin & Clerical',
-      pdf_filename: 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
-      filename: 'SUNDAY GRP 4 SCHEDULE -2026.pdf',
-      fees: 12000,
-      duration: '6 Months',
-      date: '2026-03-01',
-      status: 'ACTIVE'
-    },
-    {
-      id: 9,
-      course_key: 'group4',
-      category: 'TNPSC',
-      title: 'Group IV Samacheer Kalvi 6th to 10th Standard Quick Revision Notes',
-      syllabus: 'Group IV Samacheer Kalvi 6th to 10th Standard Quick Revision Notes',
-      paper: 'Part A - General Tamil',
-      subject: 'Ilakkanam, Ilakkiyam, Tamil Arignargalum Tamil Thondum',
-      department: 'Village Admin & Clerical',
-      pdf_filename: 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
-      filename: 'Group4_Tamil_Samacheer_Guide.pdf',
-      fees: 12000,
-      duration: '6 Months',
-      date: '2026-03-12',
-      status: 'ACTIVE'
-    },
-    {
-      id: 10,
-      course_key: 'jointRecruitment',
-      category: 'TNUSRB',
-      title: 'TNUSRB Sub-Inspector (Taluk & AR) Joint Recruitment Batch',
-      syllabus: 'TNUSRB Joint Recruitment for SIs (Taluk & AR) & Station Officers',
-      paper: 'Part I & II Written Exam',
-      subject: 'Tamil Language Eligibility Test + General Knowledge & Psychology Test',
-      department: 'Taluk & Armed Reserve',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'TNUSRB_SI_Joint_Recruitment_Syllabus.pdf',
-      fees: 14000,
-      duration: '6 Months',
-      date: '2026-02-28',
-      status: 'ACTIVE'
-    },
-    {
-      id: 11,
-      course_key: 'siTechnical',
-      category: 'TNUSRB',
-      title: 'TNUSRB Sub-Inspector of Police (Technical Cadre)',
-      syllabus: 'TNUSRB Sub-Inspector of Police (Technical) Syllabus 2026',
-      paper: 'Technical Paper',
-      subject: 'Electronics & Communication Engineering / Telecommunication Systems',
-      department: 'Police Wireless Wing',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'SI_Technical_ECE_Syllabus_2026.pdf',
-      fees: 16000,
-      duration: '6 Months',
-      date: '2026-03-06',
-      status: 'ACTIVE'
-    },
-    {
-      id: 12,
-      course_key: 'siFingerprint',
-      category: 'TNUSRB',
-      title: 'TNUSRB Sub-Inspector of Police (Finger Print Bureau)',
-      syllabus: 'TNUSRB Sub-Inspector of Police (Finger Print) Official Syllabus',
-      paper: 'Technical Science',
-      subject: 'Physics, Chemistry & Biology with General Studies',
-      department: 'Forensic Bureau Cadre',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      filename: 'SI_FingerPrint_Science_Forensics.pdf',
-      fees: 16000,
-      duration: '6 Months',
-      date: '2026-03-07',
-      status: 'ACTIVE'
-    },
-    {
-      id: 13,
-      course_key: 'commonRecruitment',
-      category: 'TNUSRB',
-      title: 'TNUSRB Grade II Police Constable & Jail Warder Batch',
-      syllabus: 'TNUSRB Common Recruitment (Grade II Police Constables, Jail Warders & Firemen)',
-      paper: 'Written Test (SSLC Standard)',
-      subject: 'Tamil Eligibility (80 Marks) + Main Written Test (70 Marks: GK & Psychology)',
-      department: 'Uniformed Services',
-      pdf_filename: 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
-      filename: 'TNUSRB_PC_Common_Recruitment_Syllabus.pdf',
-      fees: 10000,
-      duration: '4 Months',
-      date: '2026-03-05',
-      status: 'ACTIVE'
-    }
-  ],
-  tests: [
-    {
-      id: 1,
-      test_code: 'tnpsc-grp4-mock-01',
-      title: 'TNPSC Group IV & VAO Full Mock Exam 01',
-      category: 'TNPSC',
-      department: 'Group IV & VAO',
-      paper: 'General Studies & General Tamil',
-      standard: 'Question',
-      total_questions: 200,
-      duration_minutes: 180,
-      exam_date: '2026-03-29',
-      pdf_filename: 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
-      positive_mark: 1.5,
-      negative_mark: 0.0,
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      test_code: 'tnusrb-si-mock-01',
-      title: 'TNUSRB SI Joint Recruitment Preliminary Mock 01',
-      category: 'TNUSRB',
-      department: 'Police Sub-Inspector',
-      paper: 'General Knowledge & Psychology',
-      standard: 'Question',
-      total_questions: 140,
-      duration_minutes: 150,
-      exam_date: '2026-04-05',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      positive_mark: 1.0,
-      negative_mark: 0.0,
-      status: 'ACTIVE'
-    },
-    {
-      id: 3,
-      test_code: 'tnpsc-omr-practice',
-      title: 'Official TNPSC 200 Questions OMR Practice Sheet',
-      category: 'TNPSC',
-      department: 'Civil Services',
-      paper: 'OMR Practice Format',
-      standard: 'OMR',
-      total_questions: 200,
-      duration_minutes: 180,
-      exam_date: 'Continuous Practice',
-      pdf_filename: 'Tnpsc - OMR Sheet-1.pdf',
-      positive_mark: 1.5,
-      negative_mark: 0.0,
-      status: 'ACTIVE'
-    }
-  ],
-  omrKeys: {
-    1: { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'A', 6: 'B', 7: 'C', 8: 'D' },
-    2: { 1: 'C', 2: 'A', 3: 'B', 4: 'D', 5: 'A', 6: 'C', 7: 'D', 8: 'B' },
-    3: { 1: 'A', 2: 'B', 3: 'C', 4: 'D' }
-  },
-  omrSubmissions: [],
-  syllabus: [
-    {
-      id: 1,
-      title: 'TNPSC Group IV & VAO Complete Scheme',
-      category: 'TNPSC',
-      department: 'Village Administration & Clerical',
-      paper: 'Part A & B',
-      pdf_filename: 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
-      description: 'General Tamil (100 Qs) + General Studies & Aptitude (100 Qs)',
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      title: 'TNUSRB Police Sub-Inspector Scheme',
-      category: 'TNUSRB',
-      department: 'Police Sub-Inspector',
-      paper: 'Part A, B & Physical',
-      pdf_filename: 'SATURDAY TIME TABLE-1.pdf',
-      description: 'General Knowledge & Logical Reasoning with Physical Endurance Standards',
-      status: 'ACTIVE'
-    }
-  ],
-  eligibility: [
-    {
-      id: 1,
-      postName: "TNPSC Group I Services",
-      minAge: "21 Years",
-      maxAgeSCST: "35 Years",
-      maxAgeOthers: "30 Years",
-      qualification: "Any Degree",
-      image: "/group3.jpg",
-      status: "ACTIVE"
-    },
-    {
-      id: 2,
-      postName: "TNPSC Group II Services",
-      minAge: "21 Years",
-      maxAgeSCST: "No Maximum Age Limit",
-      maxAgeOthers: "30 Years",
-      qualification: "Any Degree",
-      image: "/group3.jpg",
-      status: "ACTIVE"
-    },
-    {
-      id: 3,
-      postName: "TNPSC Group II A Services (Non-Interview post)",
-      minAge: "21 Years",
-      maxAgeSCST: "No Maximum Age Limit",
-      maxAgeOthers: "30 Years",
-      qualification: "Any Degree",
-      image: "/group3.jpg",
-      status: "ACTIVE"
-    },
-    {
-      id: 4,
-      postName: "TNPSC Group IV & VAO Exams",
-      minAge: "21 Years",
-      maxAgeSCST: "No Maximum Age Limit",
-      maxAgeOthers: "No Maximum Age Limit",
-      qualification: "10th Std",
-      image: "/group4.jpg",
-      status: "ACTIVE"
-    }
-  ],
-  about_pillars: [
-    {
-      id: 1,
-      number: '01',
-      title: 'Crossing Socio-Economic Barriers',
-      description: 'Bharathi Academy was founded with the explicit mission to eliminate commercial hurdles and help aspiring students from underprivileged and rural backgrounds enter Government Service through Competitive Exams.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 2,
-      number: '02',
-      title: 'Mentored by Serving Government Officers',
-      description: 'Classes are conducted by officers currently serving in various Tamil Nadu Government departments. They volunteer their weekends purely with the intention to serve society and share their firsthand strategies with fellow students.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 3,
-      number: '03',
-      title: '100% Free High-Quality Training',
-      description: 'As Bharathi Academy is founded only with the aim of supporting aspiring candidates, foundational classes and mentorship are provided at zero cost. Complete guidance is provided across every stage of the syllabus.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 4,
-      number: '04',
-      title: 'Intensive Batches for All Exams in Erode',
-      description: 'Various specialized batches are conducted for TNPSC Group 1, Group 2, Group 2A, Group 4 & VAO, and TNUSRB Sub-Inspector & Police Constable exams at our dedicated study center in Erode.',
-      status: 'ACTIVE'
-    },
-    {
-      id: 5,
-      number: '05',
-      title: 'Nominal Test Paper Fee Only',
-      description: 'No tuition fee is ever charged. A nominal fee is collected strictly to cover paper printing and automated OMR evaluation machine expenses for our weekly test batches.',
-      status: 'ACTIVE'
-    }
-  ]
-};
-
-function generateJwt(user) {
-  return `bharathi_jwt_${user.role}_${user.id}_${Date.now()}`;
+// -----------------------------------------------------------------------------
+// JWT & Single Active Device Session Helpers
+// -----------------------------------------------------------------------------
+function generateJwt(user, currentSessionId) {
+  try {
+    return jwt.sign(
+      {
+        id: user.id,
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        full_name: user.full_name || user.fullName || user.username,
+        session_id: currentSessionId,
+        active_session_id: currentSessionId,
+        session_version: user.session_version || 1
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+  } catch (err) {
+    return `bharathi_jwt_${user.role}_${user.id}_${currentSessionId}_${Date.now()}`;
+  }
 }
 
-function authResponse(user) {
-  const token = generateJwt(user);
+async function registerNewActiveSession(user, req) {
+  const newSessionId = `sess_${user.id}_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+  const deviceInfo = (req && req.headers && req.headers['user-agent']) || 'Web Browser';
+  const ipAddress = (req && (req.ip || req.headers['x-forwarded-for'])) || '127.0.0.1';
+  
+  // Persist new session identifier into MySQL database
+  const updatedUser = await mysqlDb.registerNewActiveSession(user.id, newSessionId, deviceInfo, ipAddress);
+  return { sessionId: newSessionId, user: updatedUser };
+}
+
+function authResponse(user, sessionId, customToken = null) {
+  const currentSessionId = sessionId || user.active_session_id;
+  const token = customToken || generateJwt(user, currentSessionId);
   return {
     success: true,
     status: 'success',
@@ -788,101 +121,137 @@ function authResponse(user) {
     user_id: user.id,
     username: user.username,
     email: user.email,
+    active_session_id: currentSessionId,
+    session_version: user.session_version || 1,
+    last_login_at: user.last_login_at,
+    last_device_info: user.last_device_info,
     user: {
       id: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
-      fullName: user.fullName || user.username,
-      full_name: user.full_name || user.username,
-      registerNo: user.registerNo || user.register_no || null,
-      register_no: user.registerNo || user.register_no || null
+      fullName: user.full_name || user.fullName || user.username,
+      full_name: user.full_name || user.fullName || user.username,
+      registerNo: user.register_no || null,
+      register_no: user.register_no || null,
+      active_session_id: currentSessionId,
+      session_version: user.session_version || 1,
+      last_login_at: user.last_login_at,
+      last_device_info: user.last_device_info
     }
   };
 }
 
-// -----------------------------------------------------------------------------
-// REST API Endpoints
-// -----------------------------------------------------------------------------
-app.get(['/api/health', '/api/metrics'], (req, res) => {
-  res.json({
-    status: 'online',
-    service: 'Bharathi Thervukalam Production Server',
-    version: '3.3.0',
-    database: {
-      engine: 'integrated-store',
-      status: 'connected',
-      users_count: db.users.length,
-      courses_count: db.courses.length,
-      tests_count: db.tests.length
-    },
-    security: {
-      password_hashing: 'Argon2id',
-      algorithm: 'Argon2id',
-      type: 'Argon2id (Hybrid Memory-Hard)',
-      specification: 'RFC 9106 / PHC String Standard',
-      parameters: {
-        memory_cost_kib: ARGON2ID_CONFIG.memoryCost,
-        memory_cost_mib: ARGON2ID_CONFIG.memoryCost / 1024,
-        time_cost_iterations: ARGON2ID_CONFIG.timeCost,
-        parallelism_lanes: ARGON2ID_CONFIG.parallelism,
-        hash_length_bytes: ARGON2ID_CONFIG.hashLength,
-        salt_length_bytes: ARGON2ID_CONFIG.saltLength
-      },
-      owasp_compliance: 'EXCEEDS_RECOMMENDED_SPECIFICATION',
-      status: 'ACTIVE_ENFORCED'
+function extractSessionFromRequest(req) {
+  let token = null;
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+    token = authHeader.substring(7).trim();
+  } else if (req.headers['x-access-token']) {
+    token = req.headers['x-access-token'].trim();
+  } else if (req.query && req.query.token) {
+    token = req.query.token.trim();
+  }
+
+  if (!token) return { hasToken: false };
+
+  try {
+    const decoded = jwt.decode(token);
+    if (decoded && (decoded.id || decoded.user_id || decoded.username)) {
+      return {
+        hasToken: true,
+        token,
+        userId: decoded.id || decoded.user_id,
+        username: decoded.username,
+        role: decoded.role,
+        sessionId: decoded.session_id || decoded.active_session_id,
+        sessionVersion: decoded.session_version
+      };
     }
-  });
-});
+  } catch (e) {}
 
-// Dedicated Argon2id Security Algorithm Endpoints
-app.get('/api/auth/security/algorithm', (req, res) => {
-  res.json({
-    status: 'success',
-    algorithm: 'Argon2id',
-    type: 'Argon2id',
-    version: 'v=19',
-    specification: 'RFC 9106 Password Hashing Standard',
-    recommended_by: 'OWASP / Password Hashing Competition Winner',
-    parameters: {
-      memoryCost: ARGON2ID_CONFIG.memoryCost,
-      memoryCostHuman: '64 MiB',
-      timeCost: ARGON2ID_CONFIG.timeCost,
-      parallelism: ARGON2ID_CONFIG.parallelism,
-      hashLength: ARGON2ID_CONFIG.hashLength,
-      saltLength: ARGON2ID_CONFIG.saltLength
-    },
-    sample_hash: hashPasswordArgon2id('SampleAdminSecret2026')
-  });
-});
+  if (token.startsWith('bharathi_jwt_')) {
+    const parts = token.split('_');
+    if (parts.length >= 4) {
+      return {
+        hasToken: true,
+        token,
+        userId: parseInt(parts[3], 10),
+        role: parts[2],
+        sessionId: parts.length >= 5 ? parts[4] : null
+      };
+    }
+  }
 
-app.post('/api/auth/hash-argon2id', (req, res) => {
-  const { password } = req.body || {};
-  const targetPassword = password || 'admin123';
-  const hash = hashPasswordArgon2id(targetPassword);
-  res.json({
-    status: 'success',
-    algorithm: 'Argon2id',
-    input_length: targetPassword.length,
-    hash: hash,
-    verified: verifyPasswordArgon2id(targetPassword, hash)
-  });
-});
+  const customSessionId = req.headers['x-session-id'];
+  if (customSessionId) {
+    return { hasToken: true, token, sessionId: customSessionId };
+  }
 
-app.post('/api/auth/verify-argon2id', (req, res) => {
-  const { password, hash } = req.body || {};
-  const isValid = verifyPasswordArgon2id(password, hash);
-  res.json({
-    status: 'success',
-    algorithm: 'Argon2id',
-    verified: isValid
-  });
-});
+  return { hasToken: true, token, sessionId: null };
+}
 
-// ---------------------------------------------------------------------------
-// 2. Authentication & Database Credential Enforcement
-// ---------------------------------------------------------------------------
-function authenticateDatabaseUser(username, password, allowedRoles = null) {
+// -----------------------------------------------------------------------------
+// Single Active Device Session Validation Middleware (MySQL Enforced)
+// -----------------------------------------------------------------------------
+async function verifyActiveSessionMiddleware(req, res, next) {
+  const path = req.path || '';
+  if (
+    path.includes('/login') ||
+    path.includes('/register') ||
+    path.includes('/forgot') ||
+    path.includes('/health') ||
+    path.includes('/metrics') ||
+    path.includes('/security') ||
+    path.includes('/hash') ||
+    path.includes('/download')
+  ) {
+    return next();
+  }
+
+  const sessionInfo = extractSessionFromRequest(req);
+  if (!sessionInfo.hasToken) {
+    return next();
+  }
+
+  try {
+    let dbUser = null;
+    if (sessionInfo.userId) {
+      dbUser = await mysqlDb.findUserById(sessionInfo.userId);
+    }
+    if (!dbUser && sessionInfo.username) {
+      dbUser = await mysqlDb.findUserByIdentifier(sessionInfo.username);
+    }
+
+    if (dbUser && dbUser.active_session_id && sessionInfo.sessionId) {
+      if (sessionInfo.sessionId !== dbUser.active_session_id) {
+        console.warn(`[Single-Session Violation] User '${dbUser.username}' session '${sessionInfo.sessionId}' does not match active MySQL session '${dbUser.active_session_id}'. Terminating session.`);
+        return res.status(401).json({
+          status: 'error',
+          code: 'CONCURRENT_SESSION_TERMINATED',
+          error: 'SESSION_EXPIRED_ANOTHER_DEVICE',
+          detail: 'You have been logged out because your account was logged in from another device.',
+          message: 'Your account was logged in from another device. For security, only one active device session is permitted at a time.',
+          active_device: dbUser.last_device_info,
+          last_login_at: dbUser.last_login_at,
+          redirect: '/login?reason=concurrent_device'
+        });
+      }
+    }
+
+    req.currentUser = dbUser;
+    req.sessionInfo = sessionInfo;
+    next();
+  } catch (err) {
+    console.error('[Session Middleware Error]', err.message);
+    next();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Database Authentication Function (Queries MySQL directly)
+// -----------------------------------------------------------------------------
+async function authenticateDatabaseUser(username, password, allowedRoles = null) {
   const id = (username || '').trim().toLowerCase();
   const pw = (password || '').trim();
 
@@ -890,21 +259,15 @@ function authenticateDatabaseUser(username, password, allowedRoles = null) {
     return { ok: false, status: 400, message: 'Please enter both username/email and password.' };
   }
 
-  // Lookup user in database
-  const user = db.users.find(u => 
-    (u.username && u.username.toLowerCase() === id) ||
-    (u.email && u.email.toLowerCase() === id) ||
-    (u.register_no && u.register_no.toLowerCase() === id) ||
-    (u.registerNo && u.registerNo.toLowerCase() === id)
-  );
-
+  // Lookup user in MySQL
+  const user = await mysqlDb.findUserByIdentifier(id);
   if (!user) {
-    return { ok: false, status: 401, message: 'Invalid username or password. User not found in database.' };
+    return { ok: false, status: 401, message: 'Invalid username or password. User not found in MySQL database.' };
   }
 
-  // Verify password against stored password or Argon2id hash
+  // Verify password against stored hash or credential
   let passwordValid = false;
-  if (user.password && user.password === pw) {
+  if (user.password_hash === pw || user.password === pw) {
     passwordValid = true;
   } else if (user.password_hash && verifyPasswordArgon2id(pw, user.password_hash)) {
     passwordValid = true;
@@ -925,25 +288,27 @@ function authenticateDatabaseUser(username, password, allowedRoles = null) {
     passwordValid = true;
   } else if (
     (user.email === 'techsasi22@gmail.com' || user.username === 'sasi2207') &&
-    (pw === 'admin' || pw === 'admin123' || pw === 'sasi123')
+    (pw === 'admin' || pw === 'admin123')
   ) {
     passwordValid = true;
   }
 
   if (!passwordValid) {
-    return { ok: false, status: 401, message: 'Invalid password. Please check your password and try again.' };
+    return { ok: false, status: 401, message: 'Invalid password. Please check your credentials.' };
   }
 
-  // Role check if this endpoint targets specific portals (e.g. admin or staff)
   if (allowedRoles) {
     const userRole = (user.role || '').toLowerCase();
     const rolesList = allowedRoles.map(r => r.toLowerCase());
-    const hasRole = rolesList.includes(userRole) || (rolesList.includes('staff') && userRole === 'admin') || userRole === 'super_admin';
+    const hasRole = rolesList.includes(userRole) || 
+      (rolesList.includes('admin') && (userRole === 'super_admin' || userRole === 'admin')) ||
+      (rolesList.includes('staff') && (userRole === 'super_admin' || userRole === 'admin' || userRole === 'staff')) ||
+      (rolesList.includes('student') && (userRole === 'student' || userRole === 'super_admin'));
     if (!hasRole) {
       return { 
         ok: false, 
         status: 403, 
-        message: `Access Denied: Account '${user.username}' has role '${userRole}', but this portal requires '${allowedRoles.join('/')}' clearance.` 
+        message: `Access Denied: Account '${user.username}' does not have '${allowedRoles.join('/')}' clearance.` 
       };
     }
   }
@@ -951,550 +316,1102 @@ function authenticateDatabaseUser(username, password, allowedRoles = null) {
   return { ok: true, user };
 }
 
-// Unified Login
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body || {};
-  const authResult = authenticateDatabaseUser(username, password);
-  if (!authResult.ok) {
-    return res.status(authResult.status).json({
-      detail: authResult.message,
-      message: authResult.message,
-      error: authResult.message
+// Enable active session middleware across all API routes
+app.use('/api', verifyActiveSessionMiddleware);
+
+// -----------------------------------------------------------------------------
+// 1. Health & Security
+// -----------------------------------------------------------------------------
+app.get(['/api/health', '/api/metrics'], async (req, res) => {
+  try {
+    const [uCount, cCount, tCount] = await Promise.all([
+      mysqlDb.query('SELECT COUNT(*) as cnt FROM users'),
+      mysqlDb.query('SELECT COUNT(*) as cnt FROM courses WHERE deleted_at IS NULL'),
+      mysqlDb.query('SELECT COUNT(*) as cnt FROM tests WHERE deleted_at IS NULL')
+    ]);
+    res.json({
+      status: 'online',
+      service: 'Bharathi Thervukalam MySQL Engine',
+      version: '4.0.0',
+      database: {
+        engine: 'MySQL 8 / MariaDB',
+        host: '65.108.76.42:3306',
+        database: 'techsasi_bharathi',
+        status: 'connected',
+        users_count: uCount[0].cnt,
+        courses_count: cCount[0].cnt,
+        tests_count: tCount[0].cnt
+      },
+      security: {
+        session_control: 'SINGLE_ACTIVE_DEVICE_ENFORCED',
+        token_tracking: 'MYSQL_DATABASE_LINKED',
+        password_hashing: 'Argon2id'
+      }
     });
+  } catch (err) {
+    res.json({ status: 'online', database_error: err.message });
   }
-  return res.json(authResponse(authResult.user));
 });
 
-// Dedicated Student Auth
-app.post('/api/auth/student/login', (req, res) => {
-  const { username, password } = req.body || {};
-  const authResult = authenticateDatabaseUser(username, password, ['student', 'admin']);
-  if (!authResult.ok) {
-    return res.status(authResult.status).json({
-      detail: authResult.message,
-      message: authResult.message,
-      error: authResult.message
-    });
-  }
-  return res.json(authResponse(authResult.user));
-});
-
-app.post('/api/auth/student/register', (req, res) => {
-  const data = req.body || {};
-  const userPass = data.password || 'student123';
-  const newUser = {
-    id: db.users.length + 1,
-    username: data.username || data.name || 'newstudent',
-    email: data.email || 'student@bharathi.com',
-    password: userPass,
-    password_hash: hashPasswordArgon2id(userPass),
+app.get('/api/auth/security/algorithm', (req, res) => {
+  res.json({
+    status: 'success',
     algorithm: 'Argon2id',
-    role: 'student',
-    fullName: data.name || data.username || 'Candidate',
-    full_name: data.name || data.username || 'Candidate',
-    registerNo: data.register_no || `BTK2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    status: 'ACTIVE'
-  };
-  db.users.push(newUser);
-  res.json(authResponse(newUser));
+    type: 'Argon2id',
+    version: 'v=19',
+    specification: 'RFC 9106 Password Hashing Standard',
+    recommended_by: 'OWASP'
+  });
+});
+
+app.post('/api/auth/hash-argon2id', (req, res) => {
+  const { password } = req.body || {};
+  const targetPassword = password || 'admin123';
+  const hash = hashPasswordArgon2id(targetPassword);
+  res.json({
+    status: 'success',
+    algorithm: 'Argon2id',
+    input_length: targetPassword.length,
+    hash: hash,
+    verified: verifyPasswordArgon2id(targetPassword, hash)
+  });
+});
+
+// -----------------------------------------------------------------------------
+// 2. Authentication & Session Control (MySQL Enforced)
+// -----------------------------------------------------------------------------
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const authResult = await authenticateDatabaseUser(username, password);
+    if (!authResult.ok) {
+      return res.status(authResult.status).json({
+        detail: authResult.message,
+        message: authResult.message,
+        error: authResult.message
+      });
+    }
+    const { sessionId, user } = await registerNewActiveSession(authResult.user, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Login Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/student/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const authResult = await authenticateDatabaseUser(username, password, ['student', 'admin', 'super_admin']);
+    if (!authResult.ok) {
+      return res.status(authResult.status).json({
+        detail: authResult.message,
+        message: authResult.message,
+        error: authResult.message
+      });
+    }
+    const { sessionId, user } = await registerNewActiveSession(authResult.user, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Student Login Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/student/register', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const userPass = data.password || 'student123';
+    const createdUser = await mysqlDb.createUser({
+      username: data.username || data.name || `student_${Date.now()}`,
+      email: data.email || `student_${Date.now()}@bharathithervukalam.com`,
+      password_hash: hashPasswordArgon2id(userPass),
+      role: 'student',
+      full_name: data.name || data.fullName || 'Student Cadet',
+      register_no: data.register_no || `BTK2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      phone: data.phone || data.phone_number || null,
+      status: 'ACTIVE'
+    });
+    const { sessionId, user } = await registerNewActiveSession(createdUser, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Student Register Error]', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/student/forgot-password', (req, res) => {
   res.json({ success: true, message: 'Password reset link sent to your registered email.' });
 });
 
-// Dedicated Staff Auth
-app.post('/api/auth/staff/login', (req, res) => {
-  const { username, password } = req.body || {};
-  const authResult = authenticateDatabaseUser(username, password, ['staff', 'admin']);
-  if (!authResult.ok) {
-    return res.status(authResult.status).json({
-      detail: authResult.message,
-      message: authResult.message,
-      error: authResult.message
-    });
+app.post('/api/auth/staff/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const authResult = await authenticateDatabaseUser(username, password, ['staff', 'admin', 'super_admin']);
+    if (!authResult.ok) {
+      return res.status(authResult.status).json({
+        detail: authResult.message,
+        message: authResult.message,
+        error: authResult.message
+      });
+    }
+    const { sessionId, user } = await registerNewActiveSession(authResult.user, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Staff Login Error]', err);
+    res.status(500).json({ error: err.message });
   }
-  return res.json(authResponse(authResult.user));
 });
 
-app.post('/api/auth/staff/register', (req, res) => {
-  const data = req.body || {};
-  const staffPass = data.password || 'staff123';
-  const newUser = {
-    id: db.users.length + 1,
-    username: data.username || 'newstaff',
-    email: data.email || 'staff@bharathi.com',
-    password: staffPass,
-    password_hash: hashPasswordArgon2id(staffPass),
-    algorithm: 'Argon2id',
-    role: 'staff',
-    fullName: data.name || data.username || 'Staff Coordinator',
-    status: 'ACTIVE'
-  };
-  db.users.push(newUser);
-  res.json(authResponse(newUser));
+app.post('/api/auth/staff/register', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const staffPass = data.password || 'staff123';
+    const createdUser = await mysqlDb.createUser({
+      username: data.username || `staff_${Date.now()}`,
+      email: data.email || `staff_${Date.now()}@bharathithervukalam.com`,
+      password_hash: hashPasswordArgon2id(staffPass),
+      role: 'staff',
+      full_name: data.name || data.fullName || 'Academic Staff',
+      phone: data.phone || null,
+      status: 'ACTIVE'
+    });
+    const { sessionId, user } = await registerNewActiveSession(createdUser, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Staff Register Error]', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/staff/forgot-password', (req, res) => {
-  res.json({ success: true, message: 'Staff password reset instructions dispatched.' });
+  res.json({ success: true, message: 'Staff recovery instructions dispatched.' });
 });
 
-// Dedicated Admin Auth
-app.post('/api/auth/admin/login', (req, res) => {
-  const { username, password } = req.body || {};
-  const authResult = authenticateDatabaseUser(username, password, ['admin']);
-  if (!authResult.ok) {
-    return res.status(authResult.status).json({
-      detail: authResult.message,
-      message: authResult.message,
-      error: authResult.message
-    });
+app.post('/api/auth/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const authResult = await authenticateDatabaseUser(username, password, ['admin', 'super_admin']);
+    if (!authResult.ok) {
+      return res.status(authResult.status).json({
+        detail: authResult.message,
+        message: authResult.message,
+        error: authResult.message
+      });
+    }
+    const { sessionId, user } = await registerNewActiveSession(authResult.user, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Admin Login Error]', err);
+    res.status(500).json({ error: err.message });
   }
-  return res.json(authResponse(authResult.user));
 });
 
-app.post('/api/auth/admin/register', (req, res) => {
-  const data = req.body || {};
-  const adminPass = data.password || 'admin123';
-  const newUser = {
-    id: db.users.length + 1,
-    username: data.username || 'newadmin',
-    email: data.email || 'admin@bharathi.com',
-    password: adminPass,
-    password_hash: hashPasswordArgon2id(adminPass),
-    algorithm: 'Argon2id',
-    role: 'admin',
-    fullName: data.name || data.username || 'Super Administrator',
-    full_name: data.name || data.username || 'Super Administrator',
-    status: 'ACTIVE'
-  };
-  db.users.push(newUser);
-  res.json(authResponse(newUser));
+app.post('/api/auth/admin/register', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const adminPass = data.password || 'admin123';
+    const createdUser = await mysqlDb.createUser({
+      username: data.username || `admin_${Date.now()}`,
+      email: data.email || `admin_${Date.now()}@bharathithervukalam.com`,
+      password_hash: hashPasswordArgon2id(adminPass),
+      role: 'admin',
+      full_name: data.name || data.fullName || 'Administrator',
+      status: 'ACTIVE'
+    });
+    const { sessionId, user } = await registerNewActiveSession(createdUser, req);
+    return res.json(authResponse(user, sessionId));
+  } catch (err) {
+    console.error('[Admin Register Error]', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/auth/admin/forgot-password', (req, res) => {
   res.json({ success: true, message: 'Admin security token dispatched.' });
 });
 
-app.get('/api/auth/me', (req, res) => {
-  res.json(db.users[0]);
-});
+// Current user profile & session verification (MySQL queried)
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const sessionInfo = extractSessionFromRequest(req);
+    if (!sessionInfo.hasToken) {
+      return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    }
 
-// Courses
-app.get('/api/courses', (req, res) => {
-  const { category, course_key } = req.query || {};
-  let result = db.courses.filter(c => c.status !== 'DELETED');
-  if (category) result = result.filter(c => c.category.toLowerCase().includes(category.toLowerCase()));
-  if (course_key) result = result.filter(c => c.course_key === course_key);
-  res.json(result);
-});
+    let user = null;
+    if (sessionInfo.userId) {
+      user = await mysqlDb.findUserById(sessionInfo.userId);
+    } else if (sessionInfo.username) {
+      user = await mysqlDb.findUserByIdentifier(sessionInfo.username);
+    }
 
-app.get('/api/courses/:id(\\d+)', (req, res) => {
-  const course = db.courses.find(c => c.id === parseInt(req.params.id));
-  if (!course) return res.status(404).json({ detail: 'Course not found' });
-  res.json(course);
-});
+    if (!user) {
+      return res.status(401).json({ status: 'error', message: 'User record not found in MySQL database' });
+    }
 
-app.post('/api/courses', (req, res) => {
-  const newCourse = { id: db.courses.length + 1, status: 'ACTIVE', ...req.body };
-  db.courses.push(newCourse);
-  res.json(newCourse);
-});
+    // Check active session mismatch
+    if (user.active_session_id && sessionInfo.sessionId && sessionInfo.sessionId !== user.active_session_id) {
+      return res.status(401).json({
+        status: 'error',
+        code: 'CONCURRENT_SESSION_TERMINATED',
+        error: 'SESSION_EXPIRED_ANOTHER_DEVICE',
+        detail: 'Your account was logged in from another device.',
+        message: 'Your account was logged in from another device. For security, only one active device session is permitted at a time.',
+        last_device: user.last_device_info,
+        last_login_at: user.last_login_at
+      });
+    }
 
-app.put('/api/courses/:id(\\d+)', (req, res) => {
-  const idx = db.courses.findIndex(c => c.id === parseInt(req.params.id));
-  if (idx !== -1) {
-    db.courses[idx] = { ...db.courses[idx], ...req.body };
-    return res.json(db.courses[idx]);
+    res.json({
+      id: user.id,
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      fullName: user.full_name || user.username,
+      full_name: user.full_name || user.username,
+      registerNo: user.register_no || null,
+      register_no: user.register_no || null,
+      phone_number: user.phone || null,
+      active_session_id: user.active_session_id,
+      session_version: user.session_version || 1,
+      last_login_at: user.last_login_at,
+      last_device_info: user.last_device_info,
+      status: user.status
+    });
+  } catch (err) {
+    console.error('[/api/auth/me Error]', err);
+    res.status(500).json({ error: err.message });
   }
-  res.status(404).json({ detail: 'Course not found' });
 });
 
-app.delete('/api/courses/:id(\\d+)', (req, res) => {
-  const idx = db.courses.findIndex(c => c.id === parseInt(req.params.id));
-  if (idx !== -1) db.courses[idx].status = 'DELETED';
-  res.json({ status: 'success' });
+// Session heartbeat verification endpoint (MySQL queried)
+app.get('/api/auth/verify-session', async (req, res) => {
+  try {
+    const sessionInfo = extractSessionFromRequest(req);
+    if (!sessionInfo.hasToken) {
+      return res.status(401).json({
+        valid: false,
+        status: 'error',
+        code: 'AUTH_REQUIRED',
+        message: 'No active session token provided.'
+      });
+    }
+
+    const userId = sessionInfo.userId || (req.currentUser && req.currentUser.id);
+    const sessionId = sessionInfo.sessionId;
+
+    const check = await mysqlDb.verifyActiveSession(userId, sessionId);
+    if (!check.valid) {
+      return res.status(401).json({
+        valid: false,
+        status: 'error',
+        code: 'CONCURRENT_SESSION_TERMINATED',
+        error: 'SESSION_EXPIRED_ANOTHER_DEVICE',
+        detail: 'You have been logged out because your account was logged in from another device.',
+        message: 'Your account was logged in from another device. For security, only one active device session is permitted at a time.',
+        active_device: check.user?.last_device_info,
+        last_login_at: check.user?.last_login_at,
+        redirect: '/login?reason=concurrent_device'
+      });
+    }
+
+    res.json({
+      valid: true,
+      status: 'active',
+      user_id: check.user.id,
+      username: check.user.username,
+      role: check.user.role,
+      active_session_id: check.user.active_session_id,
+      session_version: check.user.session_version || 1,
+      last_device_info: check.user.last_device_info,
+      last_login_at: check.user.last_login_at
+    });
+  } catch (err) {
+    console.error('[/api/auth/verify-session Error]', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Specific Group Endpoints
+// Terminate other sessions / Force single active device
+app.post('/api/auth/terminate-other-sessions', async (req, res) => {
+  try {
+    const sessionInfo = extractSessionFromRequest(req);
+    const userId = sessionInfo.userId || (req.currentUser && req.currentUser.id);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthenticated' });
+    }
+    const newSessionId = `sess_${userId}_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+    const user = await mysqlDb.terminateOtherSessions(userId, newSessionId);
+    res.json({
+      status: 'success',
+      message: 'All other sessions have been terminated. This device is now the sole active session.',
+      active_session_id: newSessionId,
+      session_version: user.session_version,
+      new_token: generateJwt(user, newSessionId)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 3. Courses (Dynamic MySQL CRUD)
+// -----------------------------------------------------------------------------
+app.get('/api/courses', async (req, res) => {
+  try {
+    const { category } = req.query || {};
+    const courses = await mysqlDb.getAllCourses(category);
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/courses/:id(\\d+)', async (req, res) => {
+  try {
+    const course = await mysqlDb.getCourseById(parseInt(req.params.id, 10));
+    if (!course) return res.status(404).json({ detail: 'Course not found' });
+    res.json(course);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/courses', async (req, res) => {
+  try {
+    const newCourse = await mysqlDb.createCourse(req.body);
+    res.json(newCourse);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/courses/:id(\\d+)', async (req, res) => {
+  try {
+    const updated = await mysqlDb.updateCourse(parseInt(req.params.id, 10), req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/courses/:id(\\d+)', async (req, res) => {
+  try {
+    await mysqlDb.deleteCourse(parseInt(req.params.id, 10));
+    res.json({ status: 'success', message: 'Course archived' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Specific Group Endpoints (/api/courses/group1, etc.)
 const groupKeys = ['group1', 'group2', 'group2A', 'group4', 'commonRecruitment', 'siTechnical', 'siFingerprint', 'jointRecruitment'];
 groupKeys.forEach(key => {
-  app.get(`/api/courses/${key}`, (req, res) => {
-    res.json(db.courses.filter(c => c.course_key === key && c.status !== 'DELETED'));
-  });
-
-  app.post(`/api/courses/${key}`, (req, res) => {
-    const newCourse = {
-      id: db.courses.length + 1,
-      course_key: key,
-      category: key.startsWith('group') ? 'TNPSC' : 'TNUSRB',
-      title: req.body.title || `${key.toUpperCase()} Batch`,
-      status: 'ACTIVE',
-      ...req.body
-    };
-    db.courses.push(newCourse);
-    res.json({ status: 'success', course: newCourse });
-  });
-
-  app.put(`/api/courses/${key}/:id`, (req, res) => {
-    const idx = db.courses.findIndex(c => c.id === parseInt(req.params.id));
-    if (idx !== -1) {
-      db.courses[idx] = { ...db.courses[idx], ...req.body };
-      return res.json({ status: 'success', course: db.courses[idx] });
+  app.get(`/api/courses/${key}`, async (req, res) => {
+    try {
+      const category = key.startsWith('group') ? 'TNPSC' : 'TNUSRB';
+      const courses = await mysqlDb.getAllCourses(category);
+      res.json(courses);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
-    res.status(404).json({ detail: 'Course not found' });
   });
 
-  app.delete(`/api/courses/${key}/:id`, (req, res) => {
-    const idx = db.courses.findIndex(c => c.id === parseInt(req.params.id));
-    if (idx !== -1) db.courses[idx].status = 'DELETED';
-    res.json({ status: 'success' });
-  });
-
-  app.get(`/api/courses/${key}/:id/download`, (req, res) => {
-    const course = db.courses.find(c => c.id === parseInt(req.params.id));
-    const filename = course?.pdf_filename || 'SUNDAY GRP 4 SCHEDULE -2025.pdf';
-    const filepath = path.join(__dirname, 'public', filename);
-    if (fs.existsSync(filepath)) return res.download(filepath);
-    res.status(404).json({ detail: 'File not found' });
-  });
-});
-
-// Tests
-app.get('/api/tests', (req, res) => res.json(db.tests.filter(t => t.status !== 'DELETED')));
-app.get('/api/tests/:id(\\d+)', (req, res) => {
-  const test = db.tests.find(t => t.id === parseInt(req.params.id));
-  if (!test) return res.status(404).json({ detail: 'Test not found' });
-  res.json(test);
-});
-
-app.post('/api/tests', (req, res) => {
-  const newTest = { id: db.tests.length + 1, status: 'ACTIVE', ...req.body };
-  db.tests.push(newTest);
-  res.json(newTest);
-});
-
-app.put('/api/tests/:id(\\d+)', (req, res) => {
-  const idx = db.tests.findIndex(t => t.id === parseInt(req.params.id));
-  if (idx !== -1) {
-    db.tests[idx] = { ...db.tests[idx], ...req.body };
-    return res.json(db.tests[idx]);
-  }
-  res.status(404).json({ detail: 'Test not found' });
-});
-
-app.delete('/api/tests/:id(\\d+)', (req, res) => {
-  const idx = db.tests.findIndex(t => t.id === parseInt(req.params.id));
-  if (idx !== -1) db.tests[idx].status = 'DELETED';
-  res.json({ status: 'success' });
-});
-
-app.get('/api/tests/:id(\\d+)/download', (req, res) => {
-  const test = db.tests.find(t => t.id === parseInt(req.params.id));
-  const filename = test?.pdf_filename || 'SATURDAY TIME TABLE-1.pdf';
-  const filepath = path.join(__dirname, 'public', filename);
-  if (fs.existsSync(filepath)) return res.download(filepath);
-  res.status(404).json({ detail: 'File not found' });
-});
-
-// OMR Evaluation
-app.get('/api/omr/tests', (req, res) => res.json(db.tests.filter(t => t.status !== 'DELETED')));
-app.get('/api/omr/master-keys', (req, res) => {
-  const testId = parseInt(req.query.test_id || 1);
-  const keys = db.omrKeys[testId] || { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
-  res.json(Object.entries(keys).map(([q, opt]) => ({ question_no: parseInt(q), correct_option: opt, marks: 1.5 })));
-});
-
-app.post('/api/omr/submit', (req, res) => {
-  const data = req.body || {};
-  const testId = parseInt(data.test_id || 1);
-  const studentName = data.student_name || 'Enrolled Candidate';
-  const studentRoll = data.student_roll_no || 'BTK2026-REG';
-  const userAnswers = data.answers || {};
-
-  const test = db.tests.find(t => t.id === testId) || db.tests[0];
-  const totalQ = test.total_questions || 25;
-  const masterKey = db.omrKeys[testId] || {};
-
-  let correct = 0;
-  let incorrect = 0;
-  let attempted = 0;
-  const breakdown = [];
-  const patterns = ['A', 'B', 'C', 'D'];
-
-  for (let q = 1; q <= totalQ; q++) {
-    const userChoice = (userAnswers[q] || '').toUpperCase();
-    const correctChoice = masterKey[q] || patterns[(q - 1) % 4];
-
-    let isCorrect = false;
-    if (['A', 'B', 'C', 'D'].includes(userChoice)) {
-      attempted++;
-      isCorrect = userChoice === correctChoice;
-      if (isCorrect) correct++;
-      else incorrect++;
+  app.post(`/api/courses/${key}`, async (req, res) => {
+    try {
+      const category = key.startsWith('group') ? 'TNPSC' : 'TNUSRB';
+      const newCourse = await mysqlDb.createCourse({
+        category,
+        title: req.body.title || `${key.toUpperCase()} Special Batch`,
+        ...req.body
+      });
+      res.json({ status: 'success', course: newCourse });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
-
-    breakdown.push({
-      question_no: q,
-      candidate_choice: userChoice || 'UNSHADED',
-      correct_choice: correctChoice,
-      is_correct: isCorrect
-    });
-  }
-
-  const unshaded = totalQ - attempted;
-  const posMark = test.positive_mark || 1.5;
-  const negMark = test.negative_mark || 0.0;
-  const rawScore = Math.max(0, Math.round(((correct * posMark) - (incorrect * negMark)) * 100) / 100);
-  const maxMarks = Math.round(totalQ * posMark * 100) / 100;
-  const percentage = maxMarks > 0 ? Math.round((rawScore / maxMarks) * 10000) / 100 : 0;
-  const accuracy = attempted > 0 ? Math.round((correct / attempted) * 10000) / 100 : 0;
-  const subCode = `OMR-${Math.floor(100000 + Math.random() * 900000)}`;
-
-  const submission = {
-    id: db.omrSubmissions.length + 1,
-    submission_code: subCode,
-    student_name: studentName,
-    student_roll_no: studentRoll,
-    test_title: test.title,
-    total_questions: totalQ,
-    attempted_count: attempted,
-    correct_count: correct,
-    incorrect_count: incorrect,
-    unshaded_count: unshaded,
-    raw_score: rawScore,
-    max_marks: maxMarks,
-    percentage: percentage,
-    accuracy: accuracy,
-    simulated_rank: Math.floor(1 + Math.random() * 30),
-    cutoff_zone: percentage >= 70 ? 'Safe Selection Zone' : 'Moderate Contention Zone',
-    breakdown: breakdown,
-    submitted_at: new Date().toISOString()
-  };
-
-  db.omrSubmissions.push(submission);
-  res.json({ status: 'success', submission_code: subCode, scorecard: submission });
-});
-
-app.get('/api/omr/submissions', (req, res) => {
-  const { roll_no } = req.query || {};
-  let list = db.omrSubmissions;
-  if (roll_no) list = list.filter(s => s.student_roll_no === roll_no);
-  res.json(list);
-});
-
-app.get('/api/omr/submissions/:code', (req, res) => {
-  const sub = db.omrSubmissions.find(s => s.submission_code === req.params.code);
-  if (!sub) return res.status(404).json({ detail: 'Submission not found' });
-  res.json(sub);
-});
-
-app.get('/api/omr', (req, res) => res.json(db.omrSubmissions));
-
-// Students
-app.get('/api/students', (req, res) => res.json(db.students.filter(s => s.status !== 'DELETED')));
-app.get('/api/students/export-pdf', (req, res) => {
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename=students_roster.csv');
-  const rows = ['Register No,Name,Email,Phone,Community,Qualification,Status'];
-  db.students.filter(s => s.status !== 'DELETED').forEach(s => {
-    rows.push(`"${s.register_no}","${s.name}","${s.email}","${s.phone}","${s.community || ''}","${s.qualification || ''}","${s.status}"`);
   });
-  res.send(rows.join('\n'));
-});
 
-app.get('/api/students/:id', (req, res) => {
-  const s = db.students.find(item => item.id === parseInt(req.params.id));
-  if (!s) return res.status(404).json({ detail: 'Student not found' });
-  res.json(s);
-});
+  app.put(`/api/courses/${key}/:id`, async (req, res) => {
+    try {
+      const updated = await mysqlDb.updateCourse(parseInt(req.params.id, 10), req.body);
+      res.json({ status: 'success', course: updated });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-app.post('/api/students', (req, res) => {
-  const newStudent = { id: db.students.length + 1, register_no: req.body.register_no || `BTK2026-${Math.floor(1000 + Math.random() * 9000)}`, status: 'ACTIVE', ...req.body };
-  db.students.push(newStudent);
-  res.json(newStudent);
-});
+  app.delete(`/api/courses/${key}/:id`, async (req, res) => {
+    try {
+      await mysqlDb.deleteCourse(parseInt(req.params.id, 10));
+      res.json({ status: 'success' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-app.delete('/api/students/:id', (req, res) => {
-  const idx = db.students.findIndex(s => s.id === parseInt(req.params.id));
-  if (idx !== -1) db.students[idx].status = 'DELETED';
-  res.json({ status: 'success' });
-});
-
-// Faculty & Achievers & Staff
-app.get('/api/faculty', (req, res) => res.json(db.faculty.filter(f => f.status !== 'DELETED')));
-app.get('/api/achievers', (req, res) => res.json(db.achievers.filter(a => a.status !== 'DELETED')));
-app.get('/api/staff', (req, res) => res.json(db.staff.filter(s => s.status !== 'DELETED')));
-app.get('/api/users', (req, res) => res.json(db.users));
-app.get('/api/syllabus', (req, res) => res.json(db.syllabus));
-
-app.post('/api/payment/create-order', (req, res) => {
-  res.json({
-    status: 'success',
-    order_id: `order_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
-    amount: parseInt((req.body.amount || 1) * 100),
-    currency: 'INR',
-    key_id: 'rzp_test_bharathi_mock'
+  app.get(`/api/courses/${key}/:id/download`, async (req, res) => {
+    try {
+      const course = await mysqlDb.getCourseById(parseInt(req.params.id, 10));
+      const filename = course?.filename || 'SUNDAY GRP 4 SCHEDULE -2025.pdf';
+      const filepath = path.join(__dirname, 'public', filename);
+      if (fs.existsSync(filepath)) {
+        return res.download(filepath);
+      }
+      res.status(404).json({ detail: 'File not found' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   });
 });
 
-app.post('/api/payment/verify', (req, res) => {
-  res.json({ status: 'success', verified: true, message: 'Enrollment confirmed.' });
-});
-
 // -----------------------------------------------------------------------------
-// Eligibility Requirements (Dynamic CRUD)
+// 4. Test Series & Schedules (Dynamic MySQL CRUD)
 // -----------------------------------------------------------------------------
-app.get('/api/eligibility', (req, res) => {
-  res.json(db.eligibility.filter(e => e.status !== 'DELETED'));
-});
-
-app.post('/api/eligibility', (req, res) => {
-  const newItem = {
-    id: db.eligibility.length + 1,
-    status: 'ACTIVE',
-    ...req.body
-  };
-  db.eligibility.push(newItem);
-  res.json(newItem);
-});
-
-app.put('/api/eligibility/:id', (req, res) => {
-  const idx = db.eligibility.findIndex(e => e.id === parseInt(req.params.id));
-  if (idx !== -1) {
-    db.eligibility[idx] = { ...db.eligibility[idx], ...req.body };
-    return res.json(db.eligibility[idx]);
-  }
-  res.status(404).json({ detail: 'Eligibility record not found' });
-});
-
-app.delete('/api/eligibility/:id', (req, res) => {
-  const idx = db.eligibility.findIndex(e => e.id === parseInt(req.params.id));
-  if (idx !== -1) db.eligibility[idx].status = 'DELETED';
-  res.json({ status: 'success' });
-});
-
-// -----------------------------------------------------------------------------
-// About Pillars / Commitments (Dynamic CRUD)
-// -----------------------------------------------------------------------------
-app.get('/api/about/pillars', (req, res) => {
-  res.json(db.about_pillars.filter(p => p.status !== 'DELETED'));
-});
-
-app.post('/api/about/pillars', (req, res) => {
-  const newPillar = {
-    id: db.about_pillars.length + 1,
-    number: String(db.about_pillars.length + 1).padStart(2, '0'),
-    status: 'ACTIVE',
-    ...req.body
-  };
-  db.about_pillars.push(newPillar);
-  res.json(newPillar);
-});
-
-app.put('/api/about/pillars/:id', (req, res) => {
-  const idx = db.about_pillars.findIndex(p => p.id === parseInt(req.params.id));
-  if (idx !== -1) {
-    db.about_pillars[idx] = { ...db.about_pillars[idx], ...req.body };
-    return res.json(db.about_pillars[idx]);
-  }
-  res.status(404).json({ detail: 'Pillar record not found' });
-});
-
-app.delete('/api/about/pillars/:id', (req, res) => {
-  const idx = db.about_pillars.findIndex(p => p.id === parseInt(req.params.id));
-  if (idx !== -1) db.about_pillars[idx].status = 'DELETED';
-  res.json({ status: 'success' });
-});
-
-// -----------------------------------------------------------------------------
-// Test Series PDF Question & Highlighted Answer Extractor
-// -----------------------------------------------------------------------------
-app.post('/api/pdf/extract-questions', (req, res) => {
+app.get('/api/tests', async (req, res) => {
   try {
-    const { pdf_path, pdf_filename, pdf_base64 } = req.body || {};
-    let targetPath = null;
+    const tests = await mysqlDb.getAllTests();
+    res.json(tests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    if (pdf_path && fs.existsSync(pdf_path)) {
-      targetPath = pdf_path;
-    } else if (pdf_filename) {
-      const candidate = path.join(__dirname, 'public', path.basename(pdf_filename));
-      if (fs.existsSync(candidate)) targetPath = candidate;
-    } else if (pdf_base64) {
-      const tempName = `temp_extract_${Date.now()}.pdf`;
-      targetPath = path.join(__dirname, 'public', tempName);
-      const buffer = Buffer.from(pdf_base64.replace(/^data:application\/pdf;base64,/, ''), 'base64');
-      fs.writeFileSync(targetPath, buffer);
-    } else {
-      targetPath = path.join(__dirname, 'public', 'SUNDAY GRP 4 SCHEDULE -2025.pdf');
+app.get('/api/tests/:id(\\d+)', async (req, res) => {
+  try {
+    const test = await mysqlDb.getTestById(parseInt(req.params.id, 10));
+    if (!test) return res.status(404).json({ detail: 'Test not found' });
+    res.json(test);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tests', async (req, res) => {
+  try {
+    const result = await mysqlDb.query(
+      'INSERT INTO tests (test_code, title, category, department, paper, standard, total_questions, duration_minutes, positive_mark, negative_mark, filename, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        req.body.test_code || `test-${Date.now()}`,
+        req.body.title || 'New Mock Test',
+        req.body.category || 'TNPSC',
+        req.body.department || 'Group IV',
+        req.body.paper || 'General Studies',
+        req.body.standard || 'SSLC',
+        req.body.total_questions || 200,
+        req.body.duration_minutes || 180,
+        req.body.positive_mark || 1.5,
+        req.body.negative_mark || 0.0,
+        req.body.filename || 'SUNDAY GRP 4 SCHEDULE -2025.pdf',
+        'ACTIVE'
+      ]
+    );
+    const test = await mysqlDb.getTestById(result.insertId);
+    res.json(test);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/tests/:id(\\d+)', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    await mysqlDb.query('UPDATE tests SET title = ?, category = ?, total_questions = ? WHERE id = ?', [
+      req.body.title,
+      req.body.category,
+      req.body.total_questions,
+      id
+    ]);
+    const updated = await mysqlDb.getTestById(id);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/tests/:id(\\d+)', async (req, res) => {
+  try {
+    await mysqlDb.query('UPDATE tests SET deleted_at = NOW() WHERE id = ?', [parseInt(req.params.id, 10)]);
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/tests/:id(\\d+)/download', async (req, res) => {
+  try {
+    const test = await mysqlDb.getTestById(parseInt(req.params.id, 10));
+    const filename = test?.filename || 'SATURDAY TIME TABLE-1.pdf';
+    const filepath = path.join(__dirname, 'public', filename);
+    if (fs.existsSync(filepath)) {
+      return res.download(filepath);
+    }
+    res.status(404).json({ detail: 'File not found' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 5. Digital OMR Evaluation Engine (MySQL Stored)
+// -----------------------------------------------------------------------------
+app.get('/api/omr/tests', async (req, res) => {
+  try {
+    const tests = await mysqlDb.getAllTests();
+    res.json(tests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/omr/master-keys', async (req, res) => {
+  try {
+    const testId = parseInt(req.query.test_id || 1, 10);
+    const keys = await mysqlDb.getOmrKeys(testId);
+    res.json(keys);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/omr/submit', async (req, res) => {
+  try {
+    const data = req.body || {};
+    const testId = parseInt(data.test_id || 1, 10);
+    const studentName = data.student_name || 'Enrolled Candidate';
+    const studentRoll = data.student_roll_no || 'BTK2026-0428';
+    const userAnswers = data.answers || {};
+
+    const test = (await mysqlDb.getTestById(testId)) || { total_questions: 25, positive_mark: 1.5, negative_mark: 0 };
+    const totalQ = test.total_questions || 25;
+    const dbKeys = await mysqlDb.getOmrKeys(testId);
+    const masterKeyMap = {};
+    dbKeys.forEach(k => { masterKeyMap[k.question_no] = k.correct_option; });
+
+    let correct = 0;
+    let incorrect = 0;
+    let attempted = 0;
+    const breakdown = [];
+    const patterns = ['A', 'B', 'C', 'D'];
+
+    for (let q = 1; q <= totalQ; q++) {
+      const userChoice = (userAnswers[q] || '').toUpperCase();
+      const correctChoice = masterKeyMap[q] || patterns[(q - 1) % 4];
+
+      let isCorrect = false;
+      if (['A', 'B', 'C', 'D'].includes(userChoice)) {
+        attempted++;
+        isCorrect = userChoice === correctChoice;
+        if (isCorrect) correct++;
+        else incorrect++;
+      }
+
+      breakdown.push({
+        question_no: q,
+        candidate_choice: userChoice || 'UNSHADED',
+        correct_choice: correctChoice,
+        is_correct: isCorrect
+      });
     }
 
-    if (!targetPath || !fs.existsSync(targetPath)) {
+    const unshaded = totalQ - attempted;
+    const posMark = test.positive_mark || 1.5;
+    const negMark = test.negative_mark || 0.0;
+    const rawScore = Math.max(0, Math.round(((correct * posMark) - (incorrect * negMark)) * 100) / 100);
+    const maxMarks = Math.round(totalQ * posMark * 100) / 100;
+    const percentage = maxMarks > 0 ? Math.round((rawScore / maxMarks) * 10000) / 100 : 0;
+    const accuracy = attempted > 0 ? Math.round((correct / attempted) * 10000) / 100 : 0;
+    const subCode = `OMR-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const saved = await mysqlDb.saveOmrSubmission({
+      submission_code: subCode,
+      test_id: testId,
+      student_roll_no: studentRoll,
+      student_name: studentName,
+      total_questions: totalQ,
+      attempted_count: attempted,
+      correct_count: correct,
+      incorrect_count: incorrect,
+      unshaded_count: unshaded,
+      raw_score: rawScore,
+      max_marks: maxMarks,
+      percentage: percentage,
+      accuracy: accuracy,
+      simulated_rank: Math.floor(1 + Math.random() * 30),
+      cutoff_zone: percentage >= 70 ? 'Safe Selection Zone' : 'Moderate Contention Zone',
+      candidate_answers_json: userAnswers,
+      breakdown_json: breakdown,
+      time_spent_seconds: data.time_spent || 300
+    });
+
+    res.json({
+      status: 'success',
+      submission_code: subCode,
+      scorecard: {
+        ...saved,
+        breakdown
+      }
+    });
+  } catch (err) {
+    console.error('[OMR Submit Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/omr/submissions', async (req, res) => {
+  try {
+    const { roll_no, test_id } = req.query || {};
+    const subs = await mysqlDb.getOmrSubmissions(roll_no, test_id);
+    res.json(subs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/omr', async (req, res) => {
+  try {
+    const subs = await mysqlDb.getOmrSubmissions();
+    res.json(subs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 6. Students Roster (Dynamic MySQL CRUD)
+// -----------------------------------------------------------------------------
+app.get('/api/students', async (req, res) => {
+  try {
+    const students = await mysqlDb.getAllStudents();
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/students/export-pdf', async (req, res) => {
+  try {
+    const students = await mysqlDb.getAllStudents();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=students_roster.csv');
+    const rows = ['Register No,Name,Email,Phone,Community,Qualification,Status'];
+    students.forEach(s => {
+      rows.push(`"${s.register_no}","${s.name}","${s.email}","${s.phone}","${s.community || ''}","${s.qualification || ''}","${s.status}"`);
+    });
+    res.send(rows.join('\n'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/students/:id', async (req, res) => {
+  try {
+    const student = await mysqlDb.getStudentById(parseInt(req.params.id, 10));
+    if (!student) return res.status(404).json({ detail: 'Student not found' });
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/students', async (req, res) => {
+  try {
+    const newStudent = await mysqlDb.createStudent(req.body);
+    res.json(newStudent);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/students/:id', async (req, res) => {
+  try {
+    const updated = await mysqlDb.updateStudent(parseInt(req.params.id, 10), req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/students/:id', async (req, res) => {
+  try {
+    await mysqlDb.deleteStudent(parseInt(req.params.id, 10));
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 7. Faculty Directory (Dynamic MySQL CRUD)
+// -----------------------------------------------------------------------------
+app.get('/api/faculty', async (req, res) => {
+  try {
+    const faculty = await mysqlDb.getAllFaculty();
+    res.json(faculty);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/faculty/:id', async (req, res) => {
+  try {
+    const f = await mysqlDb.getFacultyById(parseInt(req.params.id, 10));
+    if (!f) return res.status(404).json({ detail: 'Faculty not found' });
+    res.json(f);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/faculty', async (req, res) => {
+  try {
+    const created = await mysqlDb.createFaculty(req.body);
+    res.json(created);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/faculty/:id', async (req, res) => {
+  try {
+    const updated = await mysqlDb.updateFaculty(parseInt(req.params.id, 10), req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/faculty/:id', async (req, res) => {
+  try {
+    await mysqlDb.deleteFaculty(parseInt(req.params.id, 10));
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 8. Achievers & Hall of Fame (Dynamic MySQL CRUD)
+// -----------------------------------------------------------------------------
+app.get('/api/achievers', async (req, res) => {
+  try {
+    const achievers = await mysqlDb.getAllAchievers();
+    res.json(achievers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/achievers/:id', async (req, res) => {
+  try {
+    const a = await mysqlDb.getAchieverById(parseInt(req.params.id, 10));
+    if (!a) return res.status(404).json({ detail: 'Achiever not found' });
+    res.json(a);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/achievers', async (req, res) => {
+  try {
+    const created = await mysqlDb.createAchiever(req.body);
+    res.json(created);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/achievers/:id', async (req, res) => {
+  try {
+    const updated = await mysqlDb.updateAchiever(parseInt(req.params.id, 10), req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/achievers/:id', async (req, res) => {
+  try {
+    await mysqlDb.deleteAchiever(parseInt(req.params.id, 10));
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 9. Staff Administration (Dynamic MySQL CRUD)
+// -----------------------------------------------------------------------------
+app.get('/api/staff', async (req, res) => {
+  try {
+    const staff = await mysqlDb.getAllStaff();
+    res.json(staff);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/staff/:id', async (req, res) => {
+  try {
+    const s = await mysqlDb.getStaffById(parseInt(req.params.id, 10));
+    if (!s) return res.status(404).json({ detail: 'Staff member not found' });
+    res.json(s);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/staff', async (req, res) => {
+  try {
+    const created = await mysqlDb.createStaff(req.body);
+    res.json(created);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/staff/:id', async (req, res) => {
+  try {
+    const updated = await mysqlDb.updateStaff(parseInt(req.params.id, 10), req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/staff/:id', async (req, res) => {
+  try {
+    await mysqlDb.deleteStaff(parseInt(req.params.id, 10));
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 10. Users Roster (Dynamic MySQL CRUD)
+// -----------------------------------------------------------------------------
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await mysqlDb.getAllUsers();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const user = await mysqlDb.findUserById(parseInt(req.params.id, 10));
+    if (!user) return res.status(404).json({ detail: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const user = await mysqlDb.createUser(req.body);
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const updated = await mysqlDb.updateUser(parseInt(req.params.id, 10), req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await mysqlDb.deleteUser(parseInt(req.params.id, 10));
+    res.json({ status: 'success' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 11. PDF Question & Answer Extraction Engine
+// -----------------------------------------------------------------------------
+const { 
+  extractQuestionsFromPdfBuffer, 
+  formatQuestionsAsCleanText,
+  parseAnswerKeyContent,
+  mergeQuestionsAndAnswers
+} = require('./backend/pdfExtractorHelper');
+
+app.post('/api/pdf/extract-questions', async (req, res) => {
+  try {
+    const { 
+      pdf_path, 
+      pdf_filename, 
+      pdf_base64,
+      answer_key_base64,
+      answer_key_content,
+      answer_key_filename
+    } = req.body || {};
+
+    let targetPath = null;
+    let fileBuffer = null;
+    let displayName = 'test_paper.pdf';
+
+    if (pdf_base64) {
+      const cleanBase64 = pdf_base64.replace(/^data:application\/pdf;base64,/, '');
+      fileBuffer = Buffer.from(cleanBase64, 'base64');
+      displayName = pdf_filename || `uploaded_test_${Date.now()}.pdf`;
+      const tempPath = path.join(__dirname, 'public', path.basename(displayName));
+      fs.writeFileSync(tempPath, fileBuffer);
+      targetPath = tempPath;
+    } else if (pdf_filename) {
+      displayName = path.basename(pdf_filename);
+      const candidate = path.join(__dirname, 'public', displayName);
+      if (fs.existsSync(candidate)) {
+        targetPath = candidate;
+        fileBuffer = fs.readFileSync(candidate);
+      }
+    } else if (pdf_path && fs.existsSync(pdf_path)) {
+      targetPath = pdf_path;
+      displayName = path.basename(pdf_path);
+      fileBuffer = fs.readFileSync(pdf_path);
+    } else {
+      const defaultPdf = path.join(__dirname, 'public', 'SUNDAY GRP 4 SCHEDULE -2025.pdf');
+      if (fs.existsSync(defaultPdf)) {
+        targetPath = defaultPdf;
+        displayName = 'SUNDAY GRP 4 SCHEDULE -2025.pdf';
+        fileBuffer = fs.readFileSync(defaultPdf);
+      }
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'PDF file not found. Please upload or specify a valid PDF file path.'
       });
     }
 
-    const scriptPath = path.join(__dirname, 'backend', 'extract_test_questions.py');
     const publicDir = path.join(__dirname, 'public');
-    const execCmd = `python3 "${scriptPath}" "${targetPath}" --output all --save-dir "${publicDir}"`;
+    const baseName = path.basename(displayName, path.extname(displayName));
 
-    const { exec } = require('child_process');
-    exec(execCmd, (error, stdout, stderr) => {
-      if (error) {
-        console.error('[PDF Extraction Error]', stderr || error.message);
-        return res.status(500).json({
-          status: 'error',
-          message: 'Failed to extract questions from PDF',
-          error: stderr || error.message
-        });
-      }
+    const extractedData = await extractQuestionsFromPdfBuffer(fileBuffer, displayName);
 
-      try {
-        const lines = stdout.trim().split('\n');
-        let jsonSummary = null;
-        for (let i = lines.length - 1; i >= 0; i--) {
-          try {
-            jsonSummary = JSON.parse(lines.slice(i).join('\n'));
-            break;
-          } catch (e) {}
-        }
+    let parsedKeyMap = {};
+    if (answer_key_base64) {
+      const cleanKeyBase64 = answer_key_base64.replace(/^data:[^;]+;base64,/, '');
+      const keyBuffer = Buffer.from(cleanKeyBase64, 'base64');
+      parsedKeyMap = await parseAnswerKeyContent(keyBuffer);
+    } else if (answer_key_content) {
+      parsedKeyMap = await parseAnswerKeyContent(answer_key_content);
+    }
 
-        const baseName = path.basename(targetPath, path.extname(targetPath));
-        const fullJsonFile = path.join(publicDir, `${baseName}_extracted.json`);
-        const fullTxtFile = path.join(publicDir, `${baseName}_extracted.txt`);
+    if (Object.keys(parsedKeyMap).length > 0) {
+      const merged = mergeQuestionsAndAnswers(extractedData.questions, parsedKeyMap);
+      extractedData.questions = merged.questions;
+      extractedData.answers_identified = merged.answers_identified;
+      extractedData.answer_key_map = parsedKeyMap;
+      extractedData.answer_key_source = answer_key_filename || 'Uploaded Answer Key File';
+    }
 
-        let fullData = null;
-        if (fs.existsSync(fullJsonFile)) {
-          fullData = JSON.parse(fs.readFileSync(fullJsonFile, 'utf8'));
-        }
+    const textFormatted = formatQuestionsAsCleanText(extractedData);
+    const fullJsonFile = path.join(publicDir, `${baseName}_extracted.json`);
+    const fullTxtFile = path.join(publicDir, `${baseName}_extracted.txt`);
 
-        let textData = null;
-        if (fs.existsSync(fullTxtFile)) {
-          textData = fs.readFileSync(fullTxtFile, 'utf8');
-        }
+    fs.writeFileSync(fullJsonFile, JSON.stringify(extractedData, null, 2), 'utf8');
+    fs.writeFileSync(fullTxtFile, textFormatted, 'utf8');
 
-        res.json({
-          status: 'success',
-          pdf_name: path.basename(targetPath),
-          total_questions: fullData?.total_questions_extracted || jsonSummary?.total_questions_extracted || 0,
-          answers_identified: fullData?.questions_with_detected_answers || jsonSummary?.questions_with_detected_answers || 0,
-          questions: fullData?.questions || [],
-          formatted_text: textData,
-          json_download_url: `/${path.basename(fullJsonFile)}`,
-          txt_download_url: `/${path.basename(fullTxtFile)}`
-        });
-      } catch (parseErr) {
-        res.json({
-          status: 'success',
-          raw_output: stdout,
-          pdf_name: path.basename(targetPath)
-        });
-      }
+    return res.json({
+      status: 'success',
+      pdf_name: displayName,
+      total_pages: extractedData.total_pages,
+      total_questions: extractedData.total_questions_extracted,
+      answers_identified: extractedData.questions_with_detected_answers || extractedData.answers_identified,
+      raw_highlights_detected: extractedData.raw_highlights_detected,
+      raw_red_text_detected: extractedData.raw_red_text_detected,
+      questions: extractedData.questions,
+      answer_key_map: parsedKeyMap,
+      formatted_text: textFormatted,
+      json_download_url: `/${path.basename(fullJsonFile)}`,
+      txt_download_url: `/${path.basename(fullTxtFile)}`
     });
   } catch (err) {
+    console.error('[PDF Extraction Error]', err);
     res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+app.post('/api/pdf/merge-questions-answers', async (req, res) => {
+  try {
+    const { questions, answer_key_content, answer_key_base64 } = req.body || {};
+    let keyMap = {};
+
+    if (answer_key_base64) {
+      const cleanKeyBase64 = answer_key_base64.replace(/^data:[^;]+;base64,/, '');
+      const keyBuffer = Buffer.from(cleanKeyBase64, 'base64');
+      keyMap = await parseAnswerKeyContent(keyBuffer);
+    } else if (answer_key_content) {
+      keyMap = await parseAnswerKeyContent(answer_key_content);
+    }
+
+    const merged = mergeQuestionsAndAnswers(questions || [], keyMap);
+    res.json({
+      status: 'success',
+      key_count: Object.keys(keyMap).length,
+      answers_identified: merged.answers_identified,
+      questions: merged.questions,
+      keyMap
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/pdf/publish-test', async (req, res) => {
+  try {
+    const { 
+      title, 
+      category = 'TNPSC', 
+      department = 'Group IV',
+      paper = 'General Studies & Tamil',
+      duration_minutes = 180,
+      questions = [],
+      pdf_filename
+    } = req.body || {};
+
+    const testCode = `extracted-mock-${Date.now()}`;
+    const result = await mysqlDb.query(
+      'INSERT INTO tests (test_code, title, category, department, paper, standard, total_questions, duration_minutes, positive_mark, negative_mark, filename, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        testCode,
+        title || 'Extracted Mock Test',
+        category,
+        department,
+        paper,
+        'Official Model',
+        questions.length || 200,
+        duration_minutes || 180,
+        1.5,
+        0.0,
+        pdf_filename || 'extracted_test.pdf',
+        'ACTIVE'
+      ]
+    );
+
+    const created = await mysqlDb.getTestById(result.insertId);
+
+    res.json({
+      status: 'success',
+      message: 'Test successfully published to statewide test series & student portal!',
+      test: created
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

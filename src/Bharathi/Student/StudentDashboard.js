@@ -7,7 +7,7 @@ import {
   evaluateOMRSubmission,
   getStudentSubmissions,
 } from '../OMR/TestOMRDataManager';
-import { omrApi } from '../Api/Api';
+import { omrApi, authApi } from '../Api/Api';
 import Logo from '../img1/Logo.png';
 import AcademicCardCheckmark from '../Common/AcademicCardCheckmark';
 import '../OMR/OMRSheet.css';
@@ -129,6 +129,27 @@ const StudentDashboard = () => {
     const history = getStudentSubmissions(student.rollNo);
     setMySubmissions(history);
   }, [student.rollNo]);
+
+  // Single-device session heartbeat checker
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      try {
+        await authApi.verifySession();
+      } catch (err) {
+        // Handled automatically by axiosInstance 401 interceptor
+      }
+    };
+
+    checkActiveSession();
+    const handleFocus = () => checkActiveSession();
+    window.addEventListener('focus', handleFocus);
+    const sessionInterval = setInterval(checkActiveSession, 25000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(sessionInterval);
+    };
+  }, []);
 
   // Timer countdown hook
   useEffect(() => {
@@ -337,6 +358,9 @@ const StudentDashboard = () => {
                 <div className="d-flex align-items-center gap-2">
                   <h3 className="fw-bold mb-0 text-white fs-4">{student.name}</h3>
                   <span className="badge bg-warning text-dark fw-bold">ACTIVE CADET</span>
+                  <span className="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1" title="Single Device Session Control Active in MySQL Database">
+                    <i className="bi bi-shield-check"></i> Single Session Active
+                  </span>
                 </div>
                 <div className="d-flex flex-wrap gap-2 gap-md-3 small text-light opacity-75 mt-1">
                   <span><i className="bi bi-person-badge me-1"></i> Roll: <b>{student.rollNo}</b></span>

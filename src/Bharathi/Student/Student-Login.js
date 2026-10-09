@@ -11,6 +11,19 @@ const StudentLoginForm = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reason') === 'concurrent_device') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Single-Device Session Alert',
+        html: `<strong>Security Notice:</strong> Your student account was logged in from another device.<br/><br/>Bharathi Thervukalam enforces <strong>strict single-device session control</strong>. To continue studying on this device, please log in again.`,
+        confirmButtonColor: '#0a192f',
+        confirmButtonText: 'I Understand'
+      });
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const inputUser = username.trim();
