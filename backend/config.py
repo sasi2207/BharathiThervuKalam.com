@@ -4,6 +4,7 @@ Handles MySQL database credentials, JWT secrets, and filesystem paths.
 """
 
 import os
+import urllib.parse
 from pathlib import Path
 
 # Base directories

@@ -6,8 +6,7 @@ JWT token generation, cryptographic password hashing, and FastAPI dependency gua
 import os
 import time
 import hashlib
-import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Callable
 
 from fastapi import Depends, HTTPException, status, Header
@@ -20,9 +19,8 @@ from models import User
 # Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "bharathi_super_secret_jwt_key_2026_prod")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 Hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 Days
 
-# Security Scheme for Swagger UI & Header Extraction
 security = HTTPBearer(auto_error=False)
 
 # =============================================================================
@@ -38,165 +36,127 @@ def get_password_hash(password: str) -> str:
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         return pwd_context.hash(password)
     except Exception:
-        # Resilient crypto fallback
-        return hashlib.sha256((SALT + password).encode("utf-8")).hexdigest()
+        pass
+    return hashlib.sha256((SALT + password).encode("utf-8")).hexdigest()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify password against stored hash."""
+    if not plain_password or not hashed_password:
+        return False
     try:
         from passlib.context import CryptContext
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        return pwd_context.verify(plain_password, hashed_password)
+        if pwd_context.verify(plain_password, hashed_password):
+            return True
     except Exception:
         pass
-    
-    # Check salted sha256 or direct match for demo
-    expected_hash = hashlib.sha256((SALT + plain_password).encode("utf-8")).hexdigest()
-    return expected_hash == hashed_password or plain_password == hashed_password
+
+    # Check salted sha256 or direct sha256 or plain match for flexibility
+    expected_salted = hashlib.sha256((SALT + plain_password).encode("utf-8")).hexdigest()
+    if expected_salted == hashed_password:
+        return True
+
+    expected_direct = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
+    if expected_direct == hashed_password:
+        return True
+
+    return plain_password == hashed_password
 
 # =============================================================================
 # JWT TOKEN GENERATION & DECODING
 # =============================================================================
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Encode payload into signed JWT token."""
+    """Generate signed JWT Bearer token with expiration claims."""
+    import jwt
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": int(expire.timestamp()), "iat": int(datetime.utcnow().timestamp())})
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    try:
-        import jwt  # PyJWT or python-jose
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        if isinstance(encoded_jwt, bytes):
-            encoded_jwt = encoded_jwt.decode("utf-8")
-        return encoded_jwt
-    except Exception:
-        # Standard HMAC-SHA256 JWT representation if external library not installed
-        import hmac
-        import base64
-        header = {"alg": "HS256", "typ": "JWT"}
-        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
-        payload_b64 = base64.urlsafe_b64encode(json.dumps(to_encode).encode()).decode().rstrip("=")
-        signing_input = f"{header_b64}.{payload_b64}".encode()
-        signature = hmac.new(SECRET_KEY.encode(), signing_input, hashlib.sha256).digest()
-        sig_b64 = base64.urlsafe_b64encode(signature).decode().rstrip("=")
-        return f"{header_b64}.{payload_b64}.{sig_b64}"
+    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def decode_access_token(token: str) -> dict:
-    """Validate signature and decode token payload."""
+def decode_access_token(token: str) -> Optional[dict]:
+    """Verify and decode signed JWT Bearer token."""
+    import jwt
     try:
-        import jwt
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except Exception:
-        pass
-    
-    # Internal signature validation fallback
-    try:
-        import hmac
-        import base64
-        parts = token.split(".")
-        if len(parts) != 3:
-            raise ValueError("Malformed token")
-        header_b64, payload_b64, sig_b64 = parts
-        signing_input = f"{header_b64}.{payload_b64}".encode()
-        expected_sig = hmac.new(SECRET_KEY.encode(), signing_input, hashlib.sha256).digest()
-        
-        # Add padding back
-        pad = len(sig_b64) % 4
-        if pad:
-            sig_b64 += "=" * (4 - pad)
-        actual_sig = base64.urlsafe_b64decode(sig_b64.encode())
-        
-        if not hmac.compare_digest(expected_sig, actual_sig):
-            raise ValueError("Signature verification failed")
-            
-        pad_p = len(payload_b64) % 4
-        if pad_p:
-            payload_b64 += "=" * (4 - pad_p)
-        payload_json = base64.urlsafe_b64decode(payload_b64.encode()).decode()
-        payload = json.loads(payload_json)
-        
-        # Check expiration
-        if "exp" in payload and payload["exp"] < int(time.time()):
-            raise ValueError("Token has expired")
-            
-        return payload
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired authentication token. Please log in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return None
 
 # =============================================================================
-# FASTAPI DEPENDENCY GUARDS: AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
+# FASTAPI DEPENDENCY GUARDS (RBAC)
 # =============================================================================
 
-async def get_current_user(
-    auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
+def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Enforces JWT authentication on endpoints.
-    Fails with HTTP 401 Unauthorized if token is missing, invalid, or expired.
+    Extracts Bearer token from headers, verifies claims, and returns the User.
+    Allows optional authentication for public reads if token not provided,
+    but validates token strictly if provided.
     """
     token = None
-    if auth and auth.credentials:
-        token = auth.credentials
-    elif authorization:
-        parts = authorization.split()
-        if len(parts) == 2 and parts[0].lower() == "bearer":
-            token = parts[1]
-        else:
-            token = authorization
+    if credentials:
+        token = credentials.credentials
+    elif authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ")[1].strip()
 
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Missing Bearer token in Authorization header.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        # Check if guest or return anonymous mock user for public views
+        return None
 
     payload = decode_access_token(token)
-    user_id = payload.get("sub") or payload.get("user_id")
-
-    if not user_id:
+    if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token payload is invalid or corrupted.",
+            detail="Invalid or expired authentication credentials.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user_id = payload.get("id") or payload.get("sub") or payload.get("user_id")
+    username = payload.get("username")
+
+    query = db.query(User)
+    if user_id:
+        user = query.filter(User.id == int(user_id)).first()
+    elif username:
+        user = query.filter(User.username == username).first()
+    else:
+        user = None
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account associated with this token no longer exists.",
-            headers={"WWW-Authenticate": "Bearer"},
+        # Create user representation from token if not in DB
+        user = User(
+            id=user_id or 1,
+            username=username or "authenticated_user",
+            email=payload.get("email", "user@bharathithervukalam.com"),
+            role=payload.get("role", "student"),
+            full_name=payload.get("full_name") or username,
+            status="ACTIVE"
         )
 
     return user
 
-def require_role(*allowed_roles: str) -> Callable:
-    """
-    Role-Based Access Control (RBAC) Dependency Factory.
-    Fails with HTTP 403 Forbidden if current user's role is not in allowed_roles.
-    """
-    async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        user_role = current_user.role.lower().strip()
+def require_role(allowed_roles: List[str]) -> Callable:
+    """Role-Based Access Control (RBAC) authorization enforcement."""
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication credentials required."
+            )
+        user_role = (current_user.role or "").lower().strip()
         normalized_allowed = [r.lower().strip() for r in allowed_roles]
-
-        if user_role not in normalized_allowed:
+        if user_role not in normalized_allowed and "all" not in normalized_allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. User role '{current_user.role}' lacks permissions for this operation. Required: {', '.join(allowed_roles)}.",
+                detail=f"Access denied. Required role: {allowed_roles}. Your role: {current_user.role}"
             )
         return current_user
-
     return role_checker
